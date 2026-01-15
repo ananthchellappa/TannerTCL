@@ -8,7 +8,7 @@ workspace bindkeys -command {Hide Docked Views} -key "Ctrl+F1"
 workspace bindkeys -command {Highlight net} -key "9"
 workspace bindkeys -command {Library Navigator} -key "Ctrl+F2"
 workspace bindkeys -command {Snap to Grid} -key "Alt+G"
-workspace bindkeys -command {Pop Out} -key ​"Alt+Q"
+# workspace bindkeys -command {Pop Out} -key ​"Alt+Q" # trying to figure out why this doesn't work anymore
 workspace bindkeys -command Properties -key "Q"
 workspace bindkeys -command Fit -key "F"
 workspace bindkeys -command Close -key "Ctrl+W"
@@ -43,6 +43,12 @@ workspace bindkeys -command {Text Edit} -key "Ctrl+T"
 
 workspace menu -name {Ananth {Useful Commands} {Prop Disp Togl} }  -command {mode -disppropeval toggle}
 workspace bindkeys -command {Prop Disp Togl} -key "Ctrl+D"
+
+workspace menu -name {ADDON {Useful Commands} {Clear Highlights} }  -command {puts "clearing highlights"; highlight -clear}
+workspace bindkeys -command {Clear Highlights} -key "0"
+
+workspace menu -name {ADDON {Useful Commands} {Mode Renderon} }  -command {puts "mode renderon"; mode renderon}
+workspace bindkeys -command {Mode Renderon} -key "Ctrl+Alt+M"
 
 workspace menu -name {Ananth {Simulations} {Plot Voltages} }  -command {mode crossprobev}
 workspace bindkeys -command {Plot Voltages} -key "Alt+2"
