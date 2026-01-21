@@ -44,7 +44,7 @@ workspace bindkeys -command {Text Edit} -key "Ctrl+T"
 workspace menu -name {Ananth {Useful Commands} {Prop Disp Togl} }  -command {mode -disppropeval toggle}
 workspace bindkeys -command {Prop Disp Togl} -key "Ctrl+D"
 
-workspace menu -name {ADDON {Useful Commands} {Clear Highlights} }  -command {puts "clearing highlights"; highlight -clear}
+workspace menu -name {Ananth {Useful Commands} {Clear Highlights} }  -command {puts "clearing highlights"; highlight -clear}
 workspace bindkeys -command {Clear Highlights} -key "0"
 
 workspace menu -name {ADDON {Useful Commands} {Mode Renderon} }  -command {puts "mode renderon"; mode renderon}
@@ -254,6 +254,9 @@ workspace bindkeys -command {Go To Text Label} -key "Ctrl+X"
 
 workspace menu -name {CUSTOM {Useful Commands} {Pop} }  -command {pop}
 workspace bindkeys -command {Pop} -key "Alt+Q"
+
+workspace menu -name {CUSTOM {Useful Commands} {Push} }  -command {push}
+workspace bindkeys -command {Push} -key "Ctrl+X"
 
 # simulation aids..
 
