@@ -252,6 +252,9 @@ workspace menu -name {CUSTOM {Useful Commands} {Migrate to Iso} }  -command {mig
 workspace menu -name {CUSTOM {Useful Commands} {Go To Text Label} }  -command {puts Navigating; go_to [property get Name -system] }
 workspace bindkeys -command {Go To Text Label} -key "Ctrl+X"
 
+workspace menu -name {CUSTOM {Useful Commands} {Pop} }  -command {pop}
+workspace bindkeys -command {Pop} -key "Alt+Q"
+
 # simulation aids..
 
 workspace menu -name {CUSTOM {Simulations} {Display Node V} }  -command {mode -propevalstyle voltage}
@@ -376,18 +379,28 @@ proc scale_text { up } {
 proc user2 {} {
     ;# also need to exit WITHOUT doing anything in the case that the user accidentally
     ;# hit CTRL-E when already at top-level, else you mess up schContext
-	find none
-    set depth [ llength [workspace getactive -context] ]
-    if { ! $depth } { return }
+    find none
 
-    ;# need to save the context in a variable so can jump back in..
+    set ctx [workspace getactive -context]
+    if {![llength $ctx]} { return }
+
+    # If ctx is a single record like: "ADC schematic DESIGN ADC1"
+    # then wrap it so it becomes: "{ADC schematic DESIGN ADC1}"
+    if {[llength $ctx] == 4 && [llength [lindex $ctx 0]] == 1} {
+        set ctx [list $ctx]
+    }
+
+    set depth [llength $ctx]
+    if {!$depth} { return }
+
     upvar #0 viewContext viewL
-    set b [list]
+    upvar #0 schContext  context
+    set b     [list]
     set viewL [list]
-    upvar #0 schContext context
-    foreach el [workspace getactive -context] {
-        lappend b [lindex $el end]
-        lappend viewL [lindex $el 1]
+
+    foreach el $ctx {
+        lappend b     [lindex $el end]   ;# instance name
+        lappend viewL [lindex $el 1]     ;# view ("schematic")
     }
     set context [join $b "/"]    ;# now we've captured the context
 	set tpc [workspace getactive -toplevel_cell]
@@ -433,7 +446,6 @@ proc user3 {} {
     foreach el $insts {
         lappend b $el
 		set cxt [join $b "/"]
-;# 7/10/2015 - took out -view..  -- see note above - CPD_ADC_sim with hierarchy..
 ;#		puts "cell open -cell  $tpc -design $dsn -type schematic -view $vu -context $cxt -tracenets"
         cell open -cell $tpc -design $dsn -type schematic -view $vu -context $cxt -tracenets
         incr depth
@@ -613,3 +625,51 @@ technology simulation set general -results C:/Temp
 # put after this point, will not work!! Found the hard way :)
 
 
+proc pop {} {
+    find none
+
+    # Get and normalize context
+    set ctx [workspace getactive -context]
+    if {![llength $ctx]} { return }
+
+    # Normalize single-level case into list-of-records
+    if {[llength $ctx] == 4 && [llength [lindex $ctx 0]] == 1} {
+        set ctx [list $ctx]
+    }
+
+    set depth [llength $ctx]
+    if {$depth <= 1} {
+        # Already at top or only one level down → go to top
+        mode renderoff
+        set tpc [workspace getactive -toplevel_cell]
+        set dsn [workspace getactive -toplevel_design]
+        set vu  [workspace getactive -toplevel_view]
+        cell open -cell $tpc -design $dsn -type schematic -view $vu
+        mode renderon
+        return
+    }
+
+    # Build instance path excluding the last level
+    set b [list]
+    for {set i 0} {$i < $depth-1} {incr i} {
+        set el [lindex $ctx $i]
+        lappend b [lindex $el end]
+    }
+
+    set cxt [join $b "/"]
+
+    # Reopen one level up
+    set tpc [workspace getactive -toplevel_cell]
+    set dsn [workspace getactive -toplevel_design]
+    set vu  [workspace getactive -toplevel_view]
+
+    mode renderoff
+    cell open \
+        -cell   $tpc \
+        -design $dsn \
+        -type   schematic \
+        -view   $vu \
+        -context $cxt \
+        -tracenets
+    mode renderon
+}
