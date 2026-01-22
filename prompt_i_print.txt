@@ -1,0 +1,56 @@
+
+
+We want to build a utility to generate a print command to be used with spice, to save the terminal current. The way the spice tool wants it is
+
+.print tran i(instance_path_w_dot_separator, netname_w_dot_separator)
+
+For example.
+
+We will require the user to select an instance and a net label (not a wire).
+
+THen, we will build and print the print command using the puts TCL command.
+
+We know that
+
+workspace getactive -context
+
+gives something like
+
+# SED  {ADC schematic Proj_A0 ADC1} {analog schematic Proj_A0 anatop1}
+
+when there is more than one level, else, it would be
+
+# SED cell_Name view_type lib_name instance_name 
+(without the curly braces).
+
+To get the name of the instance that has been selected, we can use 
+
+database instances -selected
+
+which will return
+
+# SED instance_name_text
+
+So, using context and instance name, we can create (note that we have to prefix 'X' in front of each instance name
+
+Xinst1.Xinst2.Xinst_selected
+
+Having done that, to get the name of the netlabel, we can do
+
+find netlabel -scope selection
+
+which will leave only this netlabel selected
+
+Then
+
+property get Name -system
+
+to get
+
+# SED net_label_text
+
+So we can now output
+
+.print tran i(Xinst1.Xinst2.Xinst_selected,Xinst1.Xinst2.net_label_name)
+
+Give me the TCL to use with S-Edit
