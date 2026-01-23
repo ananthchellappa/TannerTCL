@@ -1,29 +1,27 @@
 proc i_print {} {
 
-    # ---- 1) Get exactly one selected instance (DO THIS FIRST; selection may change later) ----
+    # ---- 1) Require exactly one selected instance (do this first) ----
     set selInst [database instances -selected]
     if {[llength $selInst] != 1} {
         return
     }
     set instSel [lindex $selInst 0]
 
-    # ---- 2) Get and normalize current context (list of {cell view lib inst}) records ----
+    # ---- 2) Get and normalize current context (list of {cell view lib inst} records) ----
     set ctx [workspace getactive -context]
 
     # Normalize depth=1 case where ctx may come back as a single 4-word record
-    # e.g. "ADC schematic LIB ADC1" instead of "{ADC schematic LIB ADC1}"
     if {[llength $ctx] == 4 && [llength [lindex $ctx 0]] == 1} {
         set ctx [list $ctx]
     }
 
-    # Build the hierarchy instance chain for the *current schematic level*
-    # ctxInsts = {ADC1 anatop1 ...}  (instance names from context)
+    # Instance names from context (the "path from top" at current level)
     set ctxInsts [list]
     foreach el $ctx {
         lappend ctxInsts [lindex $el end]
     }
 
-    # ---- 3) Create the instance path: Xctx1.Xctx2.Xselected ----
+    # ---- 3) Build the instance path: Xctx1.Xctx2.Xselected ----
     set instParts [list]
     foreach nm $ctxInsts {
         lappend instParts "X$nm"
@@ -31,22 +29,37 @@ proc i_print {} {
     lappend instParts "X$instSel"
     set instPath [join $instParts "."]
 
-    # ---- 4) Find exactly one netlabel in the current selection ----
-    # This will typically leave only the netlabel selected.
-    find netlabel -scope selection
+    # ---- 4) Determine whether we're using a PORT name or NETLABEL name ----
+    set netOrPortName ""
 
-    set netName [property get Name -system]
-    if {[llength $netName] != 1} {
-        return
+    # Prefer port if exactly one port is selected
+    set selPorts [database ports -selected]
+    if {[llength $selPorts] == 1} {
+        # Narrow selection to the port and read its Name
+        find port -scope selection
+        set tmp [property get Name -system]
+        if {[llength $tmp] == 1} {
+            set netOrPortName [lindex $tmp 0]
+        } else {
+            return
+        }
+    } else {
+        # Otherwise require a netlabel in the selection
+        find netlabel -scope selection
+        set tmp [property get Name -system]
+        if {[llength $tmp] == 1} {
+            set netOrPortName [lindex $tmp 0]
+        } else {
+            return
+        }
     }
-    set netName [lindex $netName 0]
 
-    # ---- 5) Create the net path: Xctx1.Xctx2.netLabel ----
+    # ---- 5) Build the net/port path: Xctx1.Xctx2.<name> ----
     set netParts [list]
     foreach nm $ctxInsts {
         lappend netParts "X$nm"
     }
-    lappend netParts $netName
+    lappend netParts $netOrPortName
     set netPath [join $netParts "."]
 
     # ---- 6) Emit the SPICE print command ----
