@@ -725,3 +725,14 @@ proc push {} {
         -tracenets
     mode renderon
 }
+
+proc toggleDynamicTooltip {} {
+    set cur [setup dynamicinfo get -displaytooltip]
+    setup dynamicinfo set -displaytooltip [expr {$cur ? "false" : "true"}]
+}
+
+workspace menu -name {CUSTOM {Useful Commands} {Toggle ToolTip} }  -command {toggleDynamicTooltip}
+workspace bindkeys -command {Toggle ToolTip} -key "Ctrl+Alt+Shift+T"
+
+workspace menu -name {CUSTOM {Useful Commands} {Find in Lib Navigator} }  -command {librarynavigator select_in_lib_navigator}
+workspace bindkeys -command {Find in Lib Navigator} -key "Ctrl+Alt+S"
