@@ -54,3 +54,20 @@ So we can now output
 .print tran i(Xinst1.Xinst2.Xinst_selected,Xinst1.Xinst2.net_label_name)
 
 Give me the TCL to use with S-Edit
+
+============================
+
+I need an enhancement. Sometimes, the net is connected directly to a pin (port). In that case, there is no netlabel to select. Given that there exists
+
+database instances -selected 
+
+and
+
+database ports -selected
+
+Can we enhance the procedure to, after checking for instance selection, check for port selection and, if there is a port selected, use that name from doing
+
+    find port -scope selection 
+property get Name -system
+
+If there is no port selected, we do need a netlabel selected, so we use the previous code we had for that case.
