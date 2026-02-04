@@ -171,7 +171,7 @@ workspace menu -name {Ananth Wires {Fracture Comma Sep. Bus} }  -command {_fract
 workspace bindkeys -command {Fracture Comma Sep. Bus} -key "Ctrl+Alt+B"
 
 workspace menu -name {Ananth Wires {Install noConn} }  -command {no_conn}
-workspace bindkeys -command {Install noConn} -key "Ctrl+Shift+N"
+workspace bindkeys -command {Install noConn} -key "Ctrl+Alt+N"
 
 
 
@@ -257,6 +257,9 @@ workspace bindkeys -command {Pop} -key "Alt+Q"
 
 workspace menu -name {CUSTOM {Useful Commands} {Push} }  -command {push}
 workspace bindkeys -command {Push} -key "Ctrl+X"
+
+workspace menu -name {CUSTOM {Useful Commands} {Open Cell from Note} }  -command {open_cell_from_note }
+workspace bindkeys -command {Open Cell from Note} -key "Ctrl+Shift+N"
 
 # simulation aids..
 
@@ -747,3 +750,54 @@ workspace bindkeys -command {Toggle ToolTip} -key "Ctrl+Alt+Shift+T"
 
 workspace menu -name {CUSTOM {Useful Commands} {Find in Lib Navigator} }  -command {librarynavigator select_in_lib_navigator}
 workspace bindkeys -command {Find in Lib Navigator} -key "Ctrl+Alt+S"
+
+
+proc open_cell_from_note {} {
+
+    # Read selected text label (may come back as word-list → join)
+    set txt [property get Name -system]
+    if {![llength $txt]} { return }
+    set s [join $txt " "]
+
+    # Look ONLY for  alphanumeric_or_underscore / alphanumeric_or_underscore
+    # Example match: myLib/myCell
+    set lib ""
+    set cell ""
+    if {![regexp {(\w+)/(\w+)} $s -> lib cell]} {
+        return
+    }
+
+    # Try schematic first, then view0
+    if {![catch {cell open $cell $lib schematic -activate}]} {
+        return
+    }
+    if {![catch {cell open $cell $lib view0 -activate}]} {
+        return
+    }
+
+    puts "Could not open cell '$cell' in library '$lib' (tried views: schematic, view0)."
+}
+
+proc no_conn {} {
+
+	mode renderoff
+	set xpos [property get -name X -system -host selections]
+	set ypos [property get -name Y -system -host selections]
+	set name [property get -name Name -system -host selections]
+	set orient [property get -name TextJustification.Vertical -system -host selections]
+
+	mode draw instance
+	instance -cell NoConnection -design Misc -view symbol
+	point click -units iu -x $xpos -y $ypos
+	mode escape
+
+	if { [ regexp {(<\d+:\d+>)$} $name all bus ] } {
+		set name [property get -name Name -system -host selections]
+		property set Name -system -value $name$bus		
+	}
+	property set Angle -system -value 180
+	mode renderon
+
+}
+
+
