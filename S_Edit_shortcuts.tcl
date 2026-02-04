@@ -261,6 +261,10 @@ workspace bindkeys -command {Push} -key "Ctrl+X"
 workspace menu -name {CUSTOM {Useful Commands} {Open Cell from Note} }  -command {open_cell_from_note }
 workspace bindkeys -command {Open Cell from Note} -key "Ctrl+Shift+N"
 
+workspace menu -name {CUSTOM {Useful Commands} {Select Similar} }  -command {select_similar_instances }
+workspace bindkeys -command {Select Similar} -key "Ctrl+Alt+H"
+
+
 # simulation aids..
 
 workspace menu -name {CUSTOM {Simulations} {Display Node V} }  -command {mode -propevalstyle voltage}
@@ -800,4 +804,29 @@ proc no_conn {} {
 
 }
 
+proc select_similar_instances {} {
+
+    # Require exactly one instance selected
+    set sel [database instances -selected]
+    if {[llength $sel] != 1} {
+        return
+    }
+
+    # Get master library and master cell of the selected instance
+    set libName  [property get -system -name MasterLibrary]
+    set cellName [property get -system -name MasterCell]
+
+    # Normalize in case the return is a 1-element list
+    if {[llength $libName]  >= 1} { set libName  [lindex $libName  0] }
+    if {[llength $cellName] >= 1} { set cellName [lindex $cellName 0] }
+
+    # Basic sanity
+    if {$libName eq "" || $cellName eq ""} {
+        return
+    }
+
+    # Select all matching instances (add to selection)
+    # Per your syntax: find instance -mastercell libName-masterdesign cellName -add
+    find instance -mastercell $cellName -masterdesign $libName -add
+}
 
