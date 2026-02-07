@@ -159,6 +159,8 @@ workspace bindkeys -command {Increment Pin Spacing} -key "Ctrl+Shift+0"
 workspace menu -name {Ananth Ports {Decrement Pin Spacing} }  -command {dec_space}
 workspace bindkeys -command {Decrement Pin Spacing} -key "Ctrl+Shift+9"
 
+workspace menu -name {Ananth Ports {List Porst CSV} } -command {list_ports_csv}
+
 # Wires
 
 workspace menu -name {Ananth Wires {Stubs Hor+Ver Labels} }  -command {make_stubs}
