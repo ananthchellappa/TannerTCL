@@ -1,3 +1,13 @@
+                                                              ### 
+ #####   ####     #    #  ####  #####    #    #  ####  ###### ### 
+ #    # #    #    ##   # #    #   #      #    # #      #      ### 
+ #    # #    #    # #  # #    #   #      #    #  ####  #####   #  
+ #    # #    #    #  # # #    #   #      #    #      # #          
+ #    # #    #    #   ## #    #   #      #    # #    # #      ### 
+ #####   ####     #    #  ####    #       ####   ####  ###### ### 
+ # you can just use
+ # highlight -allviews -clear
+
 # Clear net highlights in S-Edit 2025.4 by repainting highlighted nets
 # back to the default wire color (e.g. #3ac0ff).
 #
