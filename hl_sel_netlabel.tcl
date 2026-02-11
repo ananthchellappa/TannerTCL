@@ -8,6 +8,10 @@
 # NOTE: set your color list using
 # highlight -default {red green blue gold purple yellow magenta brown lemon} # or what you will
 
+# Actually, this one works for nets that are truly internal to the block. If the net is connected to a pin and the 
+# eventual net name in the design is something different than xinst1/xinst2/net_name, the highlight command from
+# Tanner TCL does not work. It should be enhanced to work with any "correct" net name
+
 # Highlight the currently-selected netlabel's net, using hierarchical context,
 # while keeping the selection intact (since we're using TCL highlight).
 #
