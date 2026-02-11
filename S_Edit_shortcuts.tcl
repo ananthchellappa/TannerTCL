@@ -350,6 +350,10 @@ workspace bindkeys -command {Fracture Comma Sep. Bus} -key "Ctrl+Alt+B"
 workspace menu -name {CUSTOM Wires {Install noConn} }  -command {no_conn}
 workspace bindkeys -command {Install noConn} -key "Ctrl+Shift+N"
 
+workspace menu -name {CUSTOM Wires {Highlight} }  -command {hl_sel_netlabel}
+workspace bindkeys -command {Highlight} -key "7"
+
+
 # plot difference of two signals
 workspace bindkeys -command {Probe differential} -key "Ctrl+Alt+Shift+D"
 
