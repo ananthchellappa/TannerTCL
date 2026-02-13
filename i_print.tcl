@@ -36,7 +36,7 @@ proc i_print {} {
     set selPorts [database ports -selected]
     if {[llength $selPorts] == 1} {
         # Narrow selection to the port and read its Name
-        find port -scope selection
+        find port -scope selection -goto none
         set tmp [property get Name -system]
         if {[llength $tmp] == 1} {
             set netOrPortName [lindex $tmp 0]
@@ -45,7 +45,7 @@ proc i_print {} {
         }
     } else {
         # Otherwise require a netlabel in the selection
-        find netlabel -scope selection
+        find netlabel -scope selection -goto none
         set tmp [property get Name -system]
         if {[llength $tmp] == 1} {
             set netOrPortName [lindex $tmp 0]
