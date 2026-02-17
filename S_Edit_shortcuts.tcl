@@ -81,8 +81,8 @@ workspace bindkeys -command {Execute Text Label} -key "Ctrl+Shift+E"
 
 workspace menu -name {Ananth {Useful Commands} {Migrate to Iso} }  -command {mig_iso}
 
-workspace menu -name {Ananth {Useful Commands} {Go To Text Label} }  -command {puts Navigating; go_to [property get Name -system] }
-workspace bindkeys -command {Go To Text Label} -key "Ctrl+X"
+workspace menu -name {Ananth {Useful Commands} {Bookmark or Follow} }  -command {bookmark_or_follow }
+workspace bindkeys -command {Bookmark or Follow} -key "Ctrl+Alt+D"
 
 workspace menu -name {Ananth {Useful Commands} {Arrow} }  -command {puts arrow; arrow }
 workspace bindkeys -command {Arrow} -key "Ctrl+Alt+A"
