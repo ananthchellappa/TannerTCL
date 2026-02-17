@@ -90,6 +90,7 @@ workspace bindkeys -command {Arrow} -key "Ctrl+Alt+A"
 workspace menu -name {Ananth {Useful Commands} {Remove Frame} }  -command {puts "removing frame"; setup schematicpage set -host view -framestyle none }
 workspace bindkeys -command {Remove Frame} -key "Ctrl+Alt+Shift+F"
 
+
 # simulation aids..
 
 workspace menu -name {Ananth {Simulations} {Display Node V} }  -command {mode -propevalstyle voltage}
@@ -266,6 +267,17 @@ workspace bindkeys -command {Open Cell from Note} -key "Ctrl+Shift+N"
 workspace menu -name {CUSTOM {Useful Commands} {Select Similar} }  -command {select_similar_instances }
 workspace bindkeys -command {Select Similar} -key "Ctrl+Alt+H"
 
+# 2025.4 only
+
+workspace menu -name {CUSTOM {Useful Commands} {Print Lib/Cell} }  -command {print_libcell_from_selection_or_active}
+workspace bindkeys -command {Print Lib/Cell} -key "Alt+Shift+C"
+
+workspace menu -name {CUSTOM {Useful Commands} {Toggle ToolTip} }  -command {toggleDynamicTooltip}
+workspace bindkeys -command {Toggle ToolTip} -key "Ctrl+Alt+Shift+T"
+
+# workspace menu -name {ADDON {Useful Commands} {Find in Lib Navigator} }  -command {librarynavigator select_in_lib_navigator}
+workspace menu -name {CUSTOM {Useful Commands} {Find in Lib Navigator} }  -command {select_in_libnav_from_selection_or_active}
+workspace bindkeys -command {Find in Lib Navigator} -key "Ctrl+Alt+S"
 
 # simulation aids..
 
