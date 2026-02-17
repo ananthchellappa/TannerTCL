@@ -1,3 +1,14 @@
+                                                              ### 
+ #####   ####     #    #  ####  #####    #    #  ####  ###### ### 
+ #    # #    #    ##   # #    #   #      #    # #      #      ### 
+ #    # #    #    # #  # #    #   #      #    #  ####  #####   #  
+ #    # #    #    #  # # #    #   #      #    #      # #          
+ #    # #    #    #   ## #    #   #      #    # #    # #      ### 
+ #####   ####     #    #  ####    #       ####   ####  ###### ### 
+ # this is now natively supported by S-Edit
+ # 10 years ago, it wasn't :)
+ # draw addwirestubs -wirelength 3 -fontsize 7pt
+
 # updated 8/27 to set orientation based on which edge of the symbol the pin is on..
 
 proc make_stubs {} {
