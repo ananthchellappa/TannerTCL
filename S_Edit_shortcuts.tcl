@@ -170,6 +170,9 @@ workspace bindkeys -command {Stubs Hor+Ver Labels} -key "Ctrl+Space"
 workspace menu -name {Ananth Wires {Stubs Hor-Only Labels} }  -command {h_stubs}
 workspace bindkeys -command {Stubs Hor-Only Labels} -key "Shift+Space"
 
+workspace menu -name {Ananth Wires {Make stubs} }  -command {draw addwirestubs -wirelength 3 -fontsize 7pt }
+workspace bindkeys -command {Make stubs} -key "Space"
+
 workspace menu -name {Ananth Wires {Fracture Comma Sep. Bus} }  -command {_fracture}
 workspace bindkeys -command {Fracture Comma Sep. Bus} -key "Ctrl+Alt+B"
 
