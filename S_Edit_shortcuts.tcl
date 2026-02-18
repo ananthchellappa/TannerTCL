@@ -57,7 +57,7 @@ workspace menu -name {Ananth {Simulations} {Plot Currents} }  -command {mode cro
 workspace bindkeys -command {Plot Currents} -key "Ctrl+2"
 
 workspace menu -name {Ananth {Useful Commands} {Open Scratch} }  -command {open_scratch}
-workspace bindkeys -command {Open Scratch} -key "Ctrl+Alt+S"
+workspace bindkeys -command {Open Scratch} -key "Ctrl+Alt+Shift+S"
 
 workspace menu -name {Ananth {Useful Commands} {Reset Grid} }  -command {res_grid}
 workspace bindkeys -command {Reset Grid} -key "Alt+R"
@@ -231,7 +231,7 @@ workspace menu -name {CUSTOM {Simulations} {Plot Currents} }  -command {mode cro
 workspace bindkeys -command {Plot Currents} -key "Ctrl+2"
 
 workspace menu -name {CUSTOM {Useful Commands} {Open Scratch} }  -command {open_scratch}
-workspace bindkeys -command {Open Scratch} -key "Ctrl+Alt+S"
+workspace bindkeys -command {Open Scratch} -key "Ctrl+Alt+Shift+S"
 
 workspace menu -name {CUSTOM {Useful Commands} {Reset Grid} }  -command {res_grid}
 workspace bindkeys -command {Reset Grid} -key "Alt+R"
@@ -269,6 +269,9 @@ workspace bindkeys -command {Open Cell from Note} -key "Ctrl+Shift+N"
 
 workspace menu -name {CUSTOM {Useful Commands} {Select Similar} }  -command {select_similar_instances }
 workspace bindkeys -command {Select Similar} -key "Ctrl+Alt+H"
+
+workspace menu -name {CUSTOM {Useful Commands} {Update View Name} }  -command {update_view_name}
+workspace bindkeys -command {Update View Name} -key "Ctrl+Shift+S"
 
 # 2025.4 only
 
