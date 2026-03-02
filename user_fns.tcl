@@ -18,15 +18,19 @@ proc user11 {} {
 }
 
 proc scale_snap_grid { factor } {
-	set newg [expr { ( [setup schematicgrid get -snapgridsize] ) * $factor / 1000 } ]
+	# set newg [expr { ( [setup schematicgrid get -snapgridsize] ) * $factor / 1000 } ]
+	# messed up since 3/2/26
+	set newg [expr { ( [setup schematicgrid get -snapgridsize] ) * $factor * [setup schematicunits get -numerator]/ [setup schematicunits get -denominator] } ]
 	puts "setting grid to $newg"
 	setup schematicgrid set -snapgridsize $newg
 	puts "to reset do\nsetup schematicgrid set -snapgridsize 0.1\n"
 }
 
 proc res_grid {} {
-	setup schematicgrid set -snapgridsize 0.1
-	puts "setting grid to 0.1"
+	# setup schematicgrid set -snapgridsize 0.1
+	setup schematicgrid set -snapgridsize [expr { 50.0 * [setup schematicunits get -numerator]/ [setup schematicunits get -denominator] } ]
+	# messed up since 3/2/26
+	puts "setting grid to 50"
 }
 
 # updated 6/10/2015 to handle selections.. # then 6/25/2015 to be able to get instant undo
