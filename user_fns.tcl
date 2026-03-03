@@ -2,7 +2,23 @@ set schContext ""
 set viewContext [list]    ;# empty list
 set special_fn 0	;# user must explicitly set to 1 for bindkey running User10 to have effect
 set selmdfull true	;#  for fully enclosed only added
+set is_docked true
 
+proc user1 {} {
+  # Use 'variable' to declare that 'gridOn' is a global variable
+  # within the scope of this procedure. This is generally preferred
+  # over 'upvar #0' for global variables as it's clearer and often
+  # avoids unexpected behavior with some Tcl interpreters.
+  variable is_docked
+
+  if {$is_docked} {
+    window move -undock
+	set is_docked false
+  } else {
+    window move -dock
+    set is_docked true
+  }
+}
 
 proc user10 {} {
 	window close
