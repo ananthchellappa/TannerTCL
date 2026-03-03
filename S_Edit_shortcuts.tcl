@@ -17,7 +17,8 @@ workspace bindkeys -command {Wire} -key "W"
 workspace bindkeys -command {Save All Changes} -key "Ctrl+S"
 workspace bindkeys -command {Net Label} -key "L"
 
-workspace bindkeys -command {User 1} -key "Ctrl+G"
+workspace bindkeys -command {User 1} -key "Alt+D"
+# to get toggle docked working - using TCL (not perfect)
 workspace bindkeys -command {User 2} -key "Ctrl+E"
 workspace bindkeys -command {User 3} -key "Alt+X"
 workspace bindkeys -command {User 4} -key "Alt+Down Arrow"
@@ -89,6 +90,9 @@ workspace bindkeys -command {Arrow} -key "Ctrl+Alt+A"
 
 workspace menu -name {Ananth {Useful Commands} {Remove Frame} }  -command {puts "removing frame"; setup schematicpage set -host view -framestyle none }
 workspace bindkeys -command {Remove Frame} -key "Ctrl+Alt+Shift+F"
+
+workspace menu -name {Ananth {Useful Commands} {Toggle Grid} }  -command {toggle_grid}
+workspace bindkeys -command {Toggle Grid} -key "Ctrl+G"
 
 
 # simulation aids..
