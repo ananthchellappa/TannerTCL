@@ -1,5 +1,5 @@
 # # AC
-# # workspace menu -name {ADDON {} }  -command {}
+# # workspace menu -name {CUSTOM {} }  -command {}
 # # workspace bindkeys -command {} -key ""
 workspace bindkeys -command {Command Window} -key "1"
 workspace bindkeys -command {Hide Docked Views} -key "Ctrl+F1"
@@ -37,198 +37,201 @@ if { [ regexp {\s16.3} [workspace version] ]  } {
 
 
 
-workspace menu -name {ADDON R_AC_toggle}  -command {_R_AC_togl}
+workspace menu -name {CUSTOM R_AC_toggle}  -command {_R_AC_togl}
 workspace bindkeys -command {R_AC_toggle} -key "Ctrl+R"
 
-workspace menu -name {ADDON {Sel Mod Togl} }  -command {tgl_sel_mod}
+workspace menu -name {CUSTOM {Sel Mod Togl} }  -command {tgl_sel_mod}
 workspace bindkeys -command {Sel Mod Togl} -key "Ctrl+M"
 
-workspace menu -name {ADDON {pageID} }  -command {pageID}
+workspace menu -name {CUSTOM {pageID} }  -command {pageID}
 workspace bindkeys -command {pageID} -key "Ctrl+Alt+I"
 
-workspace menu -name {ADDON {Text Edit} }  -command {mul_text}
+workspace menu -name {CUSTOM {Text Edit} }  -command {mul_text}
 workspace bindkeys -command {Text Edit} -key "Ctrl+T"
 
-workspace menu -name {ADDON {Useful Commands} {Prop Disp Togl} }  -command {mode -disppropeval toggle}
+workspace menu -name {CUSTOM {Useful Commands} {Prop Disp Togl} }  -command {mode -disppropeval toggle}
 workspace bindkeys -command {Prop Disp Togl} -key "Ctrl+D"
 
-workspace menu -name {ADDON {Useful Commands} {Clear Highlights} }  -command {highlight -allviews -clear}
+workspace menu -name {CUSTOM {Useful Commands} {Clear Highlights} }  -command {highlight -allviews -clear}
 workspace bindkeys -command {Clear Highlights} -key "0"
 
-workspace menu -name {ADDON {Useful Commands} {Mode Renderon} }  -command {puts "mode renderon"; mode renderon}
+workspace menu -name {CUSTOM {Useful Commands} {Mode Renderon} }  -command {puts "mode renderon"; mode renderon}
 workspace bindkeys -command {Mode Renderon} -key "Ctrl+Alt+M"
 
-workspace menu -name {ADDON {Simulations} {Plot Voltages} }  -command {mode crossprobev}
+workspace menu -name {CUSTOM {Simulations} {Plot Voltages} }  -command {mode crossprobev}
 workspace bindkeys -command {Plot Voltages} -key "Alt+2"
 
-workspace menu -name {ADDON {Simulations} {Plot Currents} }  -command {mode crossprobei}
+workspace menu -name {CUSTOM {Simulations} {Plot Currents} }  -command {mode crossprobei}
 workspace bindkeys -command {Plot Currents} -key "Ctrl+2"
 
-workspace menu -name {ADDON {Useful Commands} {Open Scratch} }  -command {open_scratch}
+workspace menu -name {CUSTOM {Useful Commands} {Open Scratch} }  -command {open_scratch}
 workspace bindkeys -command {Open Scratch} -key "Ctrl+Alt+Shift+S"
 
-workspace menu -name {ADDON {Useful Commands} {Reset Grid} }  -command {res_grid}
+workspace menu -name {CUSTOM {Useful Commands} {Reset Grid} }  -command {res_grid}
 workspace bindkeys -command {Reset Grid} -key "Alt+R"
 
-workspace menu -name {ADDON {Useful Commands} {None Selectable} }  -command {puts "allowselect none"; allowselect none}
+workspace menu -name {CUSTOM {Useful Commands} {None Selectable} }  -command {puts "allowselect none"; allowselect none}
 workspace bindkeys -command {None Selectable} -key "Alt+N"
 
-workspace menu -name {ADDON {Useful Commands} {All Selectable} }  -command {puts "allowselect all"; allowselect all}
+workspace menu -name {CUSTOM {Useful Commands} {All Selectable} }  -command {puts "allowselect all"; allowselect all}
 workspace bindkeys -command {All Selectable} -key "Ctrl+Shift+A"
 
-workspace menu -name {ADDON {Useful Commands} {Wires Selectable} }  -command {puts "allowselect shape wire"; allowselect shape wire}
+workspace menu -name {CUSTOM {Useful Commands} {Wires Selectable} }  -command {puts "allowselect shape wire"; allowselect shape wire}
 workspace bindkeys -command {Wires Selectable} -key "Ctrl+Shift+W"
 
-# workspace menu -name {ADDON {Useful Commands} {Render On} }  -command {puts "mode renderon"; mode renderon}
+# workspace menu -name {CUSTOM {Useful Commands} {Render On} }  -command {puts "mode renderon"; mode renderon}
 # S/R 2805926178 -- had to do button text as TCL approach
 # workspace bindkeys -command {mode renderon} -key "Shift+R"
 # also didn't work :(
 
-workspace menu -name {ADDON {Useful Commands} {Execute Text Label} }  -command {puts [property get Name -system];eval [property get Name -system]}
+workspace menu -name {CUSTOM {Useful Commands} {Execute Text Label} }  -command {puts [property get Name -system];eval [property get Name -system]}
 workspace bindkeys -command {Execute Text Label} -key "Ctrl+Shift+E"
 
-workspace menu -name {ADDON {Useful Commands} {Migrate to Iso} }  -command {mig_iso}
+workspace menu -name {CUSTOM {Useful Commands} {Migrate to Iso} }  -command {mig_iso}
 
-workspace menu -name {ADDON {Useful Commands} {Bookmark or Follow} }  -command {bookmark_or_follow }
+workspace menu -name {CUSTOM {Useful Commands} {Bookmark or Follow} }  -command {bookmark_or_follow }
 workspace bindkeys -command {Bookmark or Follow} -key "Ctrl+Alt+D"
 
-workspace menu -name {ADDON {Useful Commands} {Arrow} }  -command {puts arrow; arrow }
+workspace menu -name {CUSTOM {Useful Commands} {Arrow} }  -command {puts arrow; arrow }
 workspace bindkeys -command {Arrow} -key "Ctrl+Alt+A"
 
-workspace menu -name {ADDON {Useful Commands} {Remove Frame} }  -command {puts "removing frame"; setup schematicpage set -host view -framestyle none }
+workspace menu -name {CUSTOM {Useful Commands} {Remove Frame} }  -command {puts "removing frame"; setup schematicpage set -host view -framestyle none }
 workspace bindkeys -command {Remove Frame} -key "Ctrl+Alt+Shift+F"
 
-workspace menu -name {ADDON {Useful Commands} {Capture WMF} }  -command {puts "window capture.. wmf"; window capture -format bwmetafile -file {C:\Users\Ananth.Chellappa\Desktop\junk\Tanner\test_capture.wmf} }
+workspace menu -name {CUSTOM {Useful Commands} {Capture WMF} }  -command {puts "window capture.. wmf"; window capture -format bwmetafile -file {C:\Users\Ananth.Chellappa\Desktop\junk\Tanner\test_capture.wmf} }
 workspace bindkeys -command {Capture WMF} -key "Ctrl+Alt+Shift+C"
 
-# workspace menu -name {ADDON {Useful Commands} {Pop} }  -command {pop}
+# workspace menu -name {CUSTOM {Useful Commands} {Pop} }  -command {pop}
 # workspace bindkeys -command {Pop} -key "Alt+Q"
 
-# workspace menu -name {ADDON {Useful Commands} {Push} }  -command {push}
+# workspace menu -name {CUSTOM {Useful Commands} {Push} }  -command {push}
 # workspace bindkeys -command {Push} -key "Ctrl+X"
 
-workspace menu -name {ADDON {Useful Commands} {Toggle ToolTip} }  -command {toggleDynamicTooltip}
+workspace menu -name {CUSTOM {Useful Commands} {Toggle ToolTip} }  -command {toggleDynamicTooltip}
 workspace bindkeys -command {Toggle ToolTip} -key "Ctrl+Alt+Shift+T"
 
-# workspace menu -name {ADDON {Useful Commands} {Find in Lib Navigator} }  -command {librarynavigator select_in_lib_navigator}
-workspace menu -name {ADDON {Useful Commands} {Find in Lib Navigator} }  -command {select_in_libnav_from_selection_or_active}
+# workspace menu -name {CUSTOM {Useful Commands} {Find in Lib Navigator} }  -command {librarynavigator select_in_lib_navigator}
+workspace menu -name {CUSTOM {Useful Commands} {Find in Lib Navigator} }  -command {select_in_libnav_from_selection_or_active}
 workspace bindkeys -command {Find in Lib Navigator} -key "Ctrl+Alt+S"
 
-workspace menu -name {ADDON {Useful Commands} {Open Cell from Note} }  -command {open_cell_from_note }
+workspace menu -name {CUSTOM {Useful Commands} {Open Cell from Note} }  -command {open_cell_from_note }
 workspace bindkeys -command {Open Cell from Note} -key "Ctrl+Shift+N"
 
-workspace menu -name {ADDON {Useful Commands} {Select Similar} }  -command {select_similar_instances }
+workspace menu -name {CUSTOM {Useful Commands} {Select Similar} }  -command {select_similar_instances }
 workspace bindkeys -command {Select Similar} -key "Ctrl+Alt+H"
 
-workspace menu -name {ADDON {Useful Commands} {Print Lib/Cell} }  -command {print_libcell_from_selection_or_active}
+workspace menu -name {CUSTOM {Useful Commands} {Print Lib/Cell} }  -command {print_libcell_from_selection_or_active}
 workspace bindkeys -command {Print Lib/Cell} -key "Alt+Shift+C"
 
-workspace menu -name {ADDON {Useful Commands} {Update View Name} }  -command {update_view_name}
+workspace menu -name {CUSTOM {Useful Commands} {Update View Name} }  -command {update_view_name}
 workspace bindkeys -command {Update View Name} -key "Ctrl+Shift+S"
 
-# workspace menu -name {ADDON {Window} {Close Window} }  -command {window close}
+# workspace menu -name {CUSTOM {Window} {Close Window} }  -command {window close}
 # workaround for {Close} not working in undocked, but stopped after putting in CTRL-X,ALT-Q through user 8,9
 # workspace bindkeys -command {Close Window} -key "Ctrl+W"
 
-workspace menu -name {ADDON {Useful Commands} {My Copy} }  -command {my_copy}
+workspace menu -name {CUSTOM {Useful Commands} {My Copy} }  -command {my_copy}
 workspace bindkeys -command {My Copy} -key "C"
 
-workspace menu -name {ADDON {Useful Commands} {My Move} }  -command {my_move}
+workspace menu -name {CUSTOM {Useful Commands} {My Move} }  -command {my_move}
 workspace bindkeys -command {My Move} -key "M"
 
 # simulation aids..
 
-workspace menu -name {ADDON {Simulations} {Display Node V} }  -command {mode -propevalstyle voltage}
+workspace menu -name {CUSTOM {Simulations} {Display Node V} }  -command {mode -propevalstyle voltage}
 workspace bindkeys -command {Display Node V} -key "Ctrl+Alt+V"
 
-workspace menu -name {ADDON {Simulations} {Display Terminal I} }  -command {mode -propevalstyle current}
+workspace menu -name {CUSTOM {Simulations} {Display Terminal I} }  -command {mode -propevalstyle current}
 workspace bindkeys -command {Display Terminal I} -key "Ctrl+I"
 
-workspace menu -name {ADDON {Simulations} {Display Terminal I} }  -command {mode -propevalstyle current}
+workspace menu -name {CUSTOM {Simulations} {Display Terminal I} }  -command {mode -propevalstyle current}
 workspace bindkeys -command {Display Terminal I} -key "Ctrl+I"
 
-workspace menu -name {ADDON {Simulations} {Send to Calculator} }  -command {mode crossprobev; mode -probeto calculator}
+workspace menu -name {CUSTOM {Simulations} {Send to Calculator} }  -command {mode crossprobev; mode -probeto calculator}
 workspace bindkeys -command {Send to Calculator} -key "Alt+3"
 
-workspace menu -name {ADDON {Simulations} {Send I to Calculator} }  -command {mode crossprobei; mode -probeto calculator}
+workspace menu -name {CUSTOM {Simulations} {Send I to Calculator} }  -command {mode crossprobei; mode -probeto calculator}
 workspace bindkeys -command {Send I to Calculator} -key "Ctrl+3"
 
-workspace menu -name {ADDON {Simulations} {ONC18 Cryo} }  -command {_go_CRYO}
+workspace menu -name {CUSTOM {Simulations} {ONC18 Cryo} }  -command {_go_CRYO}
 
-workspace menu -name {ADDON {Simulations} {ONC18 Room} }  -command {_go_ROOM}
+workspace menu -name {CUSTOM {Simulations} {ONC18 Room} }  -command {_go_ROOM}
 
-workspace menu -name {ADDON {Simulations} {Print i Cmd} }  -command {i_print}
+workspace menu -name {CUSTOM {Simulations} {Print i Cmd} }  -command {i_print}
 workspace bindkeys -command {Print i Cmd} -key "Ctrl+Alt+Shift+I"
+
+workspace menu -name {CUSTOM {Simulations} {OP Info Summary} }  -command {puts [mos_op_summary_for_selected]}
+workspace bindkeys -command {OP Info Summary} -key "Ctrl+Alt+1"
 
 # Bus
 
-workspace menu -name {ADDON Bus {Bus 8 bit} }  -command {bus 8}
+workspace menu -name {CUSTOM Bus {Bus 8 bit} }  -command {bus 8}
 
-workspace menu -name {ADDON Bus Bussify }  -command {bussify}
+workspace menu -name {CUSTOM Bus Bussify }  -command {bussify}
 workspace bindkeys -command Bussify -key "Ctrl+Shift+B"
 
-workspace menu -name {ADDON Bus {Increment :N>} }  -command {inc_bus}
+workspace menu -name {CUSTOM Bus {Increment :N>} }  -command {inc_bus}
 workspace bindkeys -command {Increment :N>} -key "Alt+Num +"
 
-workspace menu -name {ADDON Bus {Decrement :N>} }  -command {dec_bus}
+workspace menu -name {CUSTOM Bus {Decrement :N>} }  -command {dec_bus}
 workspace bindkeys -command {Decrement :N>} -key "Alt+Num -"
 
-workspace menu -name {ADDON Bus {Reverse Bus <M:N> -> <N:M>} }  -command {_rev_bus}
+workspace menu -name {CUSTOM Bus {Reverse Bus <M:N> -> <N:M>} }  -command {_rev_bus}
 workspace bindkeys -command {Reverse Bus <M:N> -> <N:M>} -key "Ctrl+Alt+R"
 
-workspace menu -name {ADDON Bus {Up Bus <M:N> -> <M+1:N+1>} }  -command {_up_bus}
+workspace menu -name {CUSTOM Bus {Up Bus <M:N> -> <M+1:N+1>} }  -command {_up_bus}
 workspace bindkeys -command {Up Bus <M:N> -> <M+1:N+1>} -key "Ctrl+Up Arrow"
 
-workspace menu -name {ADDON Bus {Down Bus <M:N> -> <M-1:N-1>} }  -command {_dwn_bus}
+workspace menu -name {CUSTOM Bus {Down Bus <M:N> -> <M-1:N-1>} }  -command {_dwn_bus}
 workspace bindkeys -command {Down Bus <M:N> -> <M-1:N-1>} -key "Ctrl+Down Arrow"
 
-workspace menu -name {ADDON Bus {Chop Bus <M:N> -> <M>} }  -command {_chop_bus}
+workspace menu -name {CUSTOM Bus {Chop Bus <M:N> -> <M>} }  -command {_chop_bus}
 workspace bindkeys -command {Chop Bus <M:N> -> <M>} -key "Ctrl+Shift+C"
 
-workspace menu -name {ADDON Bus {Fracture Bus} }  -command {frac_bus}
+workspace menu -name {CUSTOM Bus {Fracture Bus} }  -command {frac_bus}
 workspace bindkeys -command {Fracture Bus} -key "Ctrl+Alt+F"
 
 # Ports
 
-workspace menu -name {ADDON Ports {Toggle Port NetLabel} }  -command {tgl_port_lbl}
+workspace menu -name {CUSTOM Ports {Toggle Port NetLabel} }  -command {tgl_port_lbl}
 workspace bindkeys -command {Toggle Port NetLabel} -key "Ctrl+Shift+T"
 
-workspace menu -name {ADDON Ports {Fill Labels} }  -command {fill_labels}
+workspace menu -name {CUSTOM Ports {Fill Labels} }  -command {fill_labels}
 workspace bindkeys -command {Fill Labels} -key "Ctrl+Shift+F"
-workspace menu -name {ADDON Ports {make pins} }  -command {make_pins}
-workspace menu -name {ADDON Ports {Ports Bigger} }  -command {ports_bigger}
+workspace menu -name {CUSTOM Ports {make pins} }  -command {make_pins}
+workspace menu -name {CUSTOM Ports {Ports Bigger} }  -command {ports_bigger}
 # workspace bindkeys -command {Ports Bigger} -key ""
 
-workspace menu -name {ADDON Ports {Ports Smaller} }  -command {ports_smaller}
+workspace menu -name {CUSTOM Ports {Ports Smaller} }  -command {ports_smaller}
 # workspace bindkeys -command {Ports Smaller} -key ""
 
-workspace menu -name {ADDON Ports {Increment Pin Spacing} }  -command {incr_y_space}
+workspace menu -name {CUSTOM Ports {Increment Pin Spacing} }  -command {incr_y_space}
 workspace bindkeys -command {Increment Pin Spacing} -key "Ctrl+Shift+1"
 
-workspace menu -name {ADDON Ports {Decrement Pin Spacing} }  -command {dec_space}
+workspace menu -name {CUSTOM Ports {Decrement Pin Spacing} }  -command {dec_space}
 workspace bindkeys -command {Decrement Pin Spacing} -key "Ctrl+Shift+9"
 
-workspace menu -name {ADDON Ports {List CSV} }  -command {list_ports_csv}
+workspace menu -name {CUSTOM Ports {List CSV} }  -command {list_ports_csv}
 
 # Wires
 
-workspace menu -name {ADDON Wires {Stubs Hor+Ver Labels} }  -command {make_stubs}
+workspace menu -name {CUSTOM Wires {Stubs Hor+Ver Labels} }  -command {make_stubs}
 workspace bindkeys -command {Stubs Hor+Ver Labels} -key "Ctrl+Space"
 
-workspace menu -name {ADDON Wires {Stubs Hor-Only Labels} }  -command {h_stubs}
+workspace menu -name {CUSTOM Wires {Stubs Hor-Only Labels} }  -command {h_stubs}
 workspace bindkeys -command {Stubs Hor-Only Labels} -key "Shift+Space"
 
-workspace menu -name {ADDON Wires {Make stubs} }  -command {draw addwirestubs -wirelength 3 -fontsize 7pt }
+workspace menu -name {CUSTOM Wires {Make stubs} }  -command {draw addwirestubs -wirelength 3 -fontsize 7pt }
 workspace bindkeys -command {Make stubs} -key "Space"
 
-workspace menu -name {ADDON Wires {Fracture Comma Sep. Bus} }  -command {_fracture}
+workspace menu -name {CUSTOM Wires {Fracture Comma Sep. Bus} }  -command {_fracture}
 workspace bindkeys -command {Fracture Comma Sep. Bus} -key "Ctrl+Alt+B"
 
-workspace menu -name {ADDON Wires {Install noConn} }  -command {no_conn}
+workspace menu -name {CUSTOM Wires {Install noConn} }  -command {no_conn}
 workspace bindkeys -command {Install noConn} -key "Ctrl+Alt+N"
 
-workspace menu -name {ADDON Wires {Highlight} }  -command {hl_sel_netlabel}
+workspace menu -name {CUSTOM Wires {Highlight} }  -command {hl_sel_netlabel}
 workspace bindkeys -command {Highlight} -key "7"
 
-workspace menu -name {ADDON Wires {Set Hilite Colors} }  -command {highlight -default {blue gold red brown pink yellow magenta lemon purple}}
+workspace menu -name {CUSTOM Wires {Set Hilite Colors} }  -command {highlight -default {blue gold red brown pink yellow magenta lemon purple}}
 workspace bindkeys -command {Set Hilite Colors} -key "Ctrl+9"
