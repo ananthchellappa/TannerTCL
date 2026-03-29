@@ -136,6 +136,12 @@ workspace bindkeys -command {My Copy} -key "C"
 workspace menu -name {CUSTOM {Useful Commands} {My Move} }  -command {my_move}
 workspace bindkeys -command {My Move} -key "M"
 
+workspace menu -name {CUSTOM {Useful Commands} {Toggle Grid} }  -command {toggle_grid}
+workspace bindkeys -command {Toggle Grid} -key "Ctrl+G"
+
+workspace menu -name {CUSTOM {Useful Commands} {Delete Circles} }  -command {puts "nuking circles"; find circle -goto none; delete}
+workspace bindkeys -command {Delete Circles} -key "Ctrl+Shift+D"
+
 # simulation aids..
 
 workspace menu -name {CUSTOM {Simulations} {Display Node V} }  -command {mode -propevalstyle voltage}
