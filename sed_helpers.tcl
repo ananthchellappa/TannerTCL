@@ -1,5 +1,3 @@
-# helps with the generic code (pseudo code) that chatGPT sometimes gives you
-
 proc sed_get_current_context {} {
     set ctx [workspace getactive -context]
     if {![llength $ctx]} { return }
@@ -41,4 +39,48 @@ proc sed_get_top_view_name {} {
 
 proc sed_get_selected_instance_name {} {
     return [property get -system -name Name]
+}
+
+proc sed_get_instance_names {} {
+	return [database instances]
+}
+
+proc sed_resolve_inst_names_for_parent {poppedInst} {
+
+    set instNames [sed_get_instance_names]
+
+    # If exact match already exists, use it as-is
+    if {[lsearch -exact $instNames $poppedInst] >= 0} {
+        return $poppedInst
+    }
+
+    # Check whether poppedInst is a single bus iteration: base<idx>
+    # base may contain anything before the final <n>
+    if {![regexp {^(.*)<([0-9]+)>$} $poppedInst -> base idx]} {
+        return $poppedInst
+    }
+
+    # Search for a bused instance that contains this index.
+    # Matches names like:
+    #   xdut<1:4>
+    #   xdut<4:1>
+    foreach name $instNames {
+        if {![regexp {^(.*)<([0-9]+):([0-9]+)>$} $name -> candBase a b]} {
+            continue
+        }
+
+        if {$candBase ne $base} {
+            continue
+        }
+
+        set lo [expr {$a < $b ? $a : $b}]
+        set hi [expr {$a > $b ? $a : $b}]
+
+        if {$idx >= $lo && $idx <= $hi} {
+            return $name
+        }
+    }
+
+    # No better match found
+    return $poppedInst
 }
