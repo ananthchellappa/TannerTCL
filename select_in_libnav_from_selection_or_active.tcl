@@ -6,6 +6,8 @@
 # workspace menu -name {CUSTOM {Useful Commands} {Find in Lib Navigator} }  -command {select_in_libnav_from_selection_or_active}
 # workspace bindkeys -command {Find in Lib Navigator} -key "Ctrl+Alt+S"
 
+# Select the currently-selected instance's master in the Library Navigator,
+# or (if nothing is selected) select the active cell/view/library.
 proc select_in_libnav_from_selection_or_active {} {
 
     # What instances are selected?
@@ -22,7 +24,27 @@ proc select_in_libnav_from_selection_or_active {} {
         return
     }
 
-    # Otherwise, none selected: use the active workspace context.
+    # No instance selected.
+    # First see whether a selected text label contains lib/cell.
+    set txt [property get Name -system]
+    if {[llength $txt]} {
+        set s [join $txt " "]
+
+        # Look for alphanumeric_or_underscore / alphanumeric_or_underscore
+        # Example: myLib/myCell
+        set libFromText  ""
+        set cellFromText ""
+        if {[regexp {(\w+)/(\w+)} $s -> libFromText cellFromText]} {
+			puts "Yes!!"
+            librarynavigator select_in_lib_navigator \
+                -library $libFromText \
+                -cell    $cellFromText \
+				-view [lindex [database views -cell $cellFromText -lib $libFromText -type schematic] 0]
+            return
+        }
+    }
+
+    # Otherwise, use the active workspace context.
     set ctx [workspace getactive]
     # ctx is: {cellName viewName libraryName}
     set cellName [lindex $ctx 0]
