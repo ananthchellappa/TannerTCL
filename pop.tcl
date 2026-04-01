@@ -27,7 +27,7 @@ proc pop {} {
         cell open -cell $tpc -design $dsn -type schematic -view $vu
 
         # Re-select the instance we just popped out of (now visible at top)
-        set poppedInst [_resolve_popped_instance_name $poppedInst]
+        set poppedInst [sed_resolve_inst_names_for_parent $poppedInst]
         find instance -name $poppedInst
         window fit
 
@@ -52,7 +52,7 @@ proc pop {} {
         -tracenets
 
     # Re-select the instance we just popped out of (in the parent schematic)
-    set poppedInst [_resolve_popped_instance_name $poppedInst]
+    set poppedInst [sed_resolve_inst_names_for_parent $poppedInst]
     find instance -name $poppedInst
     window fit
 
