@@ -1,4 +1,3 @@
-# basically, show you the command that will be run so you can "fire the weapon"
 proc rename_current_view_to_symbol_review {} {
     # Get current context
     set libName  [workspace getactive -library]
@@ -35,7 +34,7 @@ proc rename_current_view_to_symbol_review {} {
     toplevel $w
     wm title $w "Review Rename Command"
     wm resizable $w 1 0
-	font create RenameCmdFont -family Arial -size 18 -weight bold
+#	font create RenameCmdFont -family Arial -size 18 -weight bold
 
     label $w.msg \
         -text "The following command will be executed:" \
@@ -45,7 +44,7 @@ proc rename_current_view_to_symbol_review {} {
         -width 90 \
         -height 4 \
         -wrap word \
-		-font RenameCmdFont
+		-font UiCmdFont
 
     $w.txt insert 1.0 $cmd
     $w.txt configure -state disabled
