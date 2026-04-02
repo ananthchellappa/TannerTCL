@@ -244,4 +244,7 @@ workspace bindkeys -command {Set Hilite Colors} -key "Ctrl+9"
 
 workspace menu -name {CUSTOM Cell {Rename to symbol} }  -command {rename_current_view_to_symbol_review}
 
+workspace menu -name {CUSTOM Cell {Rename view} }  -command {rename_current_view_prompt_newname}
+
+
 
