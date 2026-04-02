@@ -246,5 +246,6 @@ workspace menu -name {CUSTOM Cell {Rename to symbol} }  -command {rename_current
 
 workspace menu -name {CUSTOM Cell {Rename view} }  -command {rename_current_view_prompt_newname}
 
+workspace menu -name {CUSTOM Cell {Copy Cell} }  -command {copy_current_cell_dialog}
 
 
