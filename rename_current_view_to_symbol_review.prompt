@@ -1,0 +1,13 @@
+Build a TCL Tk utility that I will use with Tanner S-Edit
+
+It will get currently viewed cellview's library, cellname and viewname using
+
+workspace getactive -library
+workspace getactive -cell
+workspace getactive -view
+
+Then, if the viewtype (obtained using: workspace getactive -type) is "symbol", it will show the command that will be executed, for user to review:
+
+cell renameview -library LIB_NAME -cell CELL_NAME -view VIEW_NAME -newname symbol
+
+The window has two buttons : Proceed and Cancel.
