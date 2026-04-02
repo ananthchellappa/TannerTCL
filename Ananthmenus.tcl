@@ -241,3 +241,7 @@ workspace bindkeys -command {Highlight} -key "7"
 
 workspace menu -name {CUSTOM Wires {Set Hilite Colors} }  -command {highlight -default {blue gold red brown pink yellow magenta lemon purple}}
 workspace bindkeys -command {Set Hilite Colors} -key "Ctrl+9"
+
+workspace menu -name {CUSTOM Cell {Rename to symbol} }  -command {rename_current_view_to_symbol_review}
+
+
