@@ -26,7 +26,7 @@ proc sed_get_current_context {} {
 
 
 proc sed_get_current_library {} {
-    return [workspace getactive -toplevel_design]
+    return [workspace getactive -library]
 }
 
 proc sed_get_top_cell_name {} {
@@ -43,6 +43,14 @@ proc sed_get_selected_instance_name {} {
 
 proc sed_get_instance_names {} {
 	return [database instances]
+}
+
+proc sed_get_library_names {} {
+	return [database designs]
+}
+
+proc sed_get_current_cell_name {} {
+	return [workspace getactive -cell]
 }
 
 proc sed_resolve_inst_names_for_parent {poppedInst} {
