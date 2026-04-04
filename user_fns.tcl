@@ -20,6 +20,7 @@ proc user1 {} {
   }
 }
 
+
 proc user10 {} {
 	window close
 }
@@ -129,9 +130,9 @@ proc user4 {} {
 }
 
 proc user5 {} {
-	scale_snap_grid { 2.0 }
-# suggest ALT Up-Arrow
-# workspace bindkey -key {Alt+Up Arrow} -command {User 5}
+	select_in_libnav_from_selection_or_active
+# used to be increase snap grid, but this one is more important CTRL-ALT-S
+# needed in undocked window
 }
 
 proc user6 {} {
