@@ -16,11 +16,12 @@ workspace bindkeys -command {Save All Changes} -key "Ctrl+S"
 workspace bindkeys -command {Net Label} -key "L"
 workspace bindkeys -command {Text Label} -key "T"
 
-workspace bindkeys -command {User 1} -key "Ctrl+G"
+workspace bindkeys -command {User 1} -key "Alt+D"
+# to get toggle docked working - using TCL (not perfect)
 workspace bindkeys -command {User 2} -key "Ctrl+E"
 workspace bindkeys -command {User 3} -key "Alt+X"
 workspace bindkeys -command {User 4} -key "Alt+Down Arrow"
-workspace bindkeys -command {User 5} -key "Alt+Up Arrow"
+workspace bindkeys -command {User 5} -key "Ctrl+Alt+S"
 workspace bindkeys -command {User 6} -key "Ctrl+Num +"
 workspace bindkeys -command {User 7} -key "Ctrl+Num -"
 workspace bindkeys -command {User 8} -key "Ctrl+X"
@@ -28,6 +29,7 @@ workspace bindkeys -command {User 9} -key "Alt+Q"
 workspace bindkeys -command {User 10} -key "Ctrl+W"
 workspace bindkeys -command {Circle} -key {Ctrl+Alt+C}
 # workspace bindkeys -command {SPICE Simulation} -key {Ctrl+Shift+S} # hack 1/14/26 remove AC
+
 
 if { [ regexp {\s16.3} [workspace version] ]  } { 
 #	workspace bindkeys -command {Pop Out} -key "Alt+Q"
@@ -111,8 +113,9 @@ workspace menu -name {CUSTOM {Useful Commands} {Toggle ToolTip} }  -command {tog
 workspace bindkeys -command {Toggle ToolTip} -key "Ctrl+Alt+Shift+T"
 
 # workspace menu -name {CUSTOM {Useful Commands} {Find in Lib Navigator} }  -command {librarynavigator select_in_lib_navigator}
-workspace menu -name {CUSTOM {Useful Commands} {Find in Lib Navigator} }  -command {select_in_libnav_from_selection_or_active}
-workspace bindkeys -command {Find in Lib Navigator} -key "Ctrl+Alt+S"
+# workspace menu -name {CUSTOM {Useful Commands} {Find in Lib Navigator} }  -command {select_in_libnav_from_selection_or_active}
+# workspace bindkeys -command {Find in Lib Navigator} -key "Ctrl+Alt+S"
+# 4/4/26 - need this to work in undocked..
 
 workspace menu -name {CUSTOM {Useful Commands} {Open Cell from Note} }  -command {open_cell_from_note }
 workspace bindkeys -command {Open Cell from Note} -key "Ctrl+Shift+N"
@@ -142,6 +145,9 @@ workspace bindkeys -command {Toggle Grid} -key "Ctrl+G"
 workspace menu -name {CUSTOM {Useful Commands} {Delete Circles} }  -command {puts "nuking circles"; find circle -goto none; delete}
 workspace bindkeys -command {Delete Circles} -key "Ctrl+Shift+D"
 
+workspace menu -name {CUSTOM {Useful Commands} {Increase snap grid} }  -command {scale_snap_grid { 2.0 }}
+workspace bindkeys -command {Increase snap grid} -key "Alt+Up Arrow"
+
 # simulation aids..
 
 workspace menu -name {CUSTOM {Simulations} {Display Node V} }  -command {mode -propevalstyle voltage}
@@ -168,6 +174,7 @@ workspace bindkeys -command {Print i Cmd} -key "Ctrl+Alt+Shift+I"
 
 workspace menu -name {CUSTOM {Simulations} {OP Info Summary} }  -command {puts [mos_op_summary_for_selected]}
 workspace bindkeys -command {OP Info Summary} -key "Ctrl+Alt+1"
+
 
 # Bus
 
@@ -247,5 +254,3 @@ workspace menu -name {CUSTOM Cell {Rename to symbol} }  -command {rename_current
 workspace menu -name {CUSTOM Cell {Rename view} }  -command {rename_current_view_prompt_newname}
 
 workspace menu -name {CUSTOM Cell {Copy Cell} }  -command {copy_current_cell_dialog}
-
-
