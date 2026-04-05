@@ -139,3 +139,30 @@ proc _select_textlabel_by_internal_name_raw {targetInternalName} {
     puts "Did not find textlabel with internal name: $targetInternalName"
     return 0
 }
+
+# Given label coordinates and a list like:
+#   {{ {x y} portName } { {x y} portName } ...}
+# return the nearest port name.
+proc nearest_port_name {labelX labelY ports} {
+    set bestName ""
+    set bestD2 ""
+
+    foreach portEntry $ports {
+        set loc  [lindex $portEntry 0]
+        set name [lindex $portEntry 1]
+
+        set px [lindex $loc 0]
+        set py [lindex $loc 1]
+
+        set dx [expr {$px - $labelX}]
+        set dy [expr {$py - $labelY}]
+        set d2 [expr {$dx*$dx + $dy*$dy}]
+
+        if {$bestD2 eq "" || $d2 < $bestD2} {
+            set bestD2 $d2
+            set bestName $name
+        }
+    }
+
+    return $bestName
+}
