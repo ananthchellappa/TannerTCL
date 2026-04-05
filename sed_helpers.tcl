@@ -92,3 +92,49 @@ proc sed_resolve_inst_names_for_parent {poppedInst} {
     # No better match found
     return $poppedInst
 }
+
+proc select_textlabel_by_internal_name {targetInternalName} {
+	mode renderoff
+	_select_textlabel_by_internal_name_raw $targetInternalName
+	mode renderon
+}
+
+proc _select_textlabel_by_internal_name_raw {targetInternalName} {
+    # How many textlabels exist in the view?
+
+    set n [find textlabel -scope view -count -goto none]
+
+    if {$n <= 0} {
+        puts "No textlabels found in current view."
+        return 0
+    }
+
+    # Start iteration: this selects the first textlabel
+    find textlabel -scope view -first -goto none
+
+    for {set i 0} {$i < $n} {incr i} {
+        # Get the currently selected label(s) with names
+        set sel [database labels -selected -name]
+
+        # We expect exactly one selected textlabel during this walk
+        if {[llength $sel] == 1} {
+            set one [lindex $sel 0]
+
+            # Format is: {internal_unique_name displayed_label_text}
+            set internalName [lindex $one 0]
+
+            if {$internalName eq $targetInternalName} {
+                puts "Selected textlabel $targetInternalName"
+                return 1
+            }
+        }
+
+        # Advance unless this was the last iteration
+        if {$i < $n-1} {
+            find textlabel -scope view -next -goto none
+        }
+    }
+
+    puts "Did not find textlabel with internal name: $targetInternalName"
+    return 0
+}
