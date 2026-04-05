@@ -95,8 +95,9 @@ proc sed_resolve_inst_names_for_parent {poppedInst} {
 
 proc select_textlabel_by_internal_name {targetInternalName} {
 	mode renderoff
-	_select_textlabel_by_internal_name_raw $targetInternalName
+	set retval [_select_textlabel_by_internal_name_raw $targetInternalName]
 	mode renderon
+	return $retval
 }
 
 proc _select_textlabel_by_internal_name_raw {targetInternalName} {
