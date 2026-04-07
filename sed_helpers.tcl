@@ -166,3 +166,55 @@ proc nearest_port_name {labelX labelY ports} {
 
     return $bestName
 }
+
+
+proc get_selected_ports_in_physical_order {} {
+    set ports [database ports -selected -location -name]
+
+    if {[llength $ports] == 0} {
+        return {}
+    }
+
+    set norm {}
+    set xs {}
+    set ys {}
+
+    foreach p $ports {
+        set loc  [lindex $p 0]
+        set name [lindex $p 1]
+
+        set x [lindex $loc 0]
+        set y [lindex $loc 1]
+
+        lappend norm [list $name $x $y]
+        lappend xs $x
+        lappend ys $y
+    }
+
+    set minX [lindex [lsort -integer $xs] 0]
+    set maxX [lindex [lsort -integer $xs] end]
+    set minY [lindex [lsort -integer $ys] 0]
+    set maxY [lindex [lsort -integer $ys] end]
+
+    set dx [expr {$maxX - $minX}]
+    set dy [expr {$maxY - $minY}]
+
+    if {$dx >= $dy} {
+        set sorted [lsort -integer -index 1 $norm]
+    } else {
+        set sorted [lsort -integer -decreasing -index 2 $norm]
+    }
+
+    set result {}
+    foreach item $sorted {
+        lappend result [lindex $item 0]
+    }
+
+    return $result
+}
+
+proc print_selected_ports_in_physical_order {} {
+    foreach portName [get_selected_ports_in_physical_order] {
+        puts $portName
+    }
+}
