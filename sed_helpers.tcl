@@ -53,6 +53,10 @@ proc sed_get_current_cell_name {} {
 	return [workspace getactive -cell]
 }
 
+proc sed_get_current_view_name {} {
+	return [workspace getactive -view]
+}
+
 proc sed_resolve_inst_names_for_parent {poppedInst} {
 
     set instNames [sed_get_instance_names]
