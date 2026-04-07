@@ -226,3 +226,20 @@ proc print_selected_ports_in_physical_order {} {
         puts $portName
     }
 }
+
+proc get_preferred_schematic_view {} {
+    set views [database views \
+        -cell [sed_get_current_cell_name] \
+        -library [sed_get_current_library] \
+        -type schematic]
+
+    if {[llength $views] == 0} {
+        return ""
+    }
+
+    if {[lsearch -exact $views schematic] >= 0} {
+        return "schematic"
+    }
+
+    return [lindex $views 0]
+}
