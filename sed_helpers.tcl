@@ -45,6 +45,10 @@ proc sed_get_instance_names {} {
 	return [database instances]
 }
 
+proc sed_list_selected_inst_names {} {
+	return [database instances -selected]
+}
+
 proc sed_get_library_names {} {
 	return [database designs]
 }
@@ -52,6 +56,7 @@ proc sed_get_library_names {} {
 proc sed_get_current_cell_name {} {
 	return [workspace getactive -cell]
 }
+
 
 proc sed_get_current_view_name {} {
 	return [workspace getactive -view]
@@ -174,7 +179,6 @@ proc nearest_port_name {labelX labelY ports} {
 
     return $bestName
 }
-
 
 proc get_selected_ports_in_physical_order {} {
     set ports [database ports -selected -location -name]
