@@ -17,6 +17,7 @@ proc uiutil::init {} {
         return
     }
 
+	uiutil::ensure_font UiAlertFont   -family Arial   -size 18 -weight bold
     uiutil::ensure_font UiTitleFont   -family Arial   -size 12 -weight bold
     uiutil::ensure_font UiLabelFont   -family Arial   -size 10
     uiutil::ensure_font UiBoldFont    -family Arial   -size 10 -weight bold
