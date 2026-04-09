@@ -254,3 +254,7 @@ workspace menu -name {CUSTOM Cell {Rename to symbol} }  -command {rename_current
 workspace menu -name {CUSTOM Cell {Rename view} }  -command {rename_current_view_prompt_newname}
 
 workspace menu -name {CUSTOM Cell {Copy Cell} }  -command {copy_current_cell_dialog}
+
+workspace menu -name {ADDON Cell {Make Array Uniform} }  -command {make_selected_array_uniform}
+
+workspace menu -name {ADDON Cell {Name Array Instances} }  -command {name_selected_array_instances}
