@@ -30,22 +30,22 @@ proc copy_current_cell_dialog {} {
 
     # Fonts
     if {[lsearch -exact [font names] CopyCellLabelFont] < 0} {
-        font create CopyCellLabelFont -family Arial -size 12 -weight bold
+        font create CopyCellLabelFont -family Arial -size 10 -weight bold
     }
     if {[lsearch -exact [font names] CopyCellEntryFont] < 0} {
-        font create CopyCellEntryFont -family Arial -size 14 -weight bold
+        font create CopyCellEntryFont -family Arial -size 13
     }
     if {[lsearch -exact [font names] CopyCellCmdFont] < 0} {
         font create CopyCellCmdFont -family Courier -size 14 -weight bold
     }
 
     option add *TCombobox*Listbox.font CopyCellEntryFont
-	
 
-    # State
-    set ::copyCell_allLibs($w)      $allLibs
-    set ::copyCell_toLibEntry($w)   $currentLib
-    set ::copyCell_comboDisplay($w) $currentLib
+    # Per-window state
+    set ::copyCell_allLibs($w)         $allLibs
+    set ::copyCell_currentValues($w)   $allLibs
+    set ::copyCell_updatingCombo($w)   0
+    set ::copyCell_toLib($w)           $currentLib
 
     # Initial command preview text
     set initialCmd "cell copy -library $currentLib -cell $currentCell -to_library $currentLib -to_cell "
@@ -68,26 +68,16 @@ proc copy_current_cell_dialog {} {
         -width 40 \
         -font CopyCellEntryFont
 
-    label $w.toLibEntryLbl \
-        -text "To Library (type to filter):" \
-        -anchor w \
-        -font CopyCellLabelFont
-
-    entry $w.toLibEnt \
-        -width 40 \
-        -textvariable ::copyCell_toLibEntry($w) \
-        -font CopyCellEntryFont
-
     label $w.libLbl \
-        -text "Matching Libraries:" \
+        -text "To Library:" \
         -anchor w \
         -font CopyCellLabelFont
 
     ttk::combobox $w.libCombo \
         -width 30 \
-        -state readonly \
+        -state normal \
         -values $allLibs \
-        -textvariable ::copyCell_comboDisplay($w) \
+        -textvariable ::copyCell_toLib($w) \
         -font CopyCellEntryFont
 
     label $w.cmdLbl \
@@ -114,24 +104,22 @@ proc copy_current_cell_dialog {} {
         -text "Cancel" \
         -command [list copy_current_cell_dialog_cancel $w]
 
-    pack $w.src           -side top -fill x -padx 10 -pady {10 5}
-    pack $w.nameLbl       -side top -fill x -padx 10 -pady {8 3}
-    pack $w.nameEnt       -side top -fill x -padx 10 -pady {0 5}
-    pack $w.toLibEntryLbl -side top -fill x -padx 10 -pady {8 3}
-    pack $w.toLibEnt      -side top -fill x -padx 10 -pady {0 5}
-    pack $w.libLbl        -side top -fill x -padx 10 -pady {8 3}
-    pack $w.libCombo      -side top -fill x -padx 10 -pady {0 5}
-    pack $w.cmdLbl        -side top -fill x -padx 10 -pady {10 3}
-    pack $w.cmdTxt        -side top -fill both -expand 1 -padx 10 -pady {0 8}
-    pack $w.btns          -side top -fill x -padx 10 -pady 10
-    pack $w.btns.proceed  -side left -padx 5
-    pack $w.btns.cancel   -side right -padx 5
+    pack $w.src      -side top -fill x -padx 10 -pady {10 5}
+    pack $w.nameLbl  -side top -fill x -padx 10 -pady {8 3}
+    pack $w.nameEnt  -side top -fill x -padx 10 -pady {0 5}
+    pack $w.libLbl   -side top -fill x -padx 10 -pady {8 3}
+    pack $w.libCombo -side top -fill x -padx 10 -pady {0 5}
+    pack $w.cmdLbl   -side top -fill x -padx 10 -pady {10 3}
+    pack $w.cmdTxt   -side top -fill both -expand 1 -padx 10 -pady {0 8}
+    pack $w.btns     -side top -fill x -padx 10 -pady 10
+    pack $w.btns.proceed -side left -padx 5
+    pack $w.btns.cancel  -side right -padx 5
 
     bind $w.nameEnt <KeyRelease> \
         [list copy_current_cell_dialog_update_command $w $currentLib $currentCell]
 
-    bind $w.toLibEnt <KeyRelease> \
-        [list copy_current_cell_dialog_filter_libs $w $currentLib $currentCell]
+    bind $w.libCombo <KeyRelease> \
+        [list copy_current_cell_dialog_filter_combo $w $currentLib $currentCell]
 
     bind $w.libCombo <<ComboboxSelected>> \
         [list copy_current_cell_dialog_combo_selected $w $currentLib $currentCell]
@@ -139,14 +127,18 @@ proc copy_current_cell_dialog {} {
     bind $w.nameEnt <Return> \
         [list copy_current_cell_dialog_do $w $currentLib $currentCell]
 
-    bind $w.toLibEnt <Return> \
+    bind $w.libCombo <Return> \
         [list copy_current_cell_dialog_do $w $currentLib $currentCell]
 
     focus $w.nameEnt
 }
 
-proc copy_current_cell_dialog_filter_libs {w currentLib currentCell} {
-    set typed [string trim $::copyCell_toLibEntry($w)]
+proc copy_current_cell_dialog_filter_combo {w currentLib currentCell} {
+    if {$::copyCell_updatingCombo($w)} {
+        return
+    }
+
+    set typed $::copyCell_toLib($w)
     set allLibs $::copyCell_allLibs($w)
 
     set matches {}
@@ -156,58 +148,43 @@ proc copy_current_cell_dialog_filter_libs {w currentLib currentCell} {
         }
     }
 
-    $w.libCombo configure -values $matches
-
-    if {$typed eq ""} {
-        set ::copyCell_comboDisplay($w) $currentLib
-    } elseif {[llength $matches] > 0} {
-        set ::copyCell_comboDisplay($w) [lindex $matches 0]
-    } else {
-        set ::copyCell_comboDisplay($w) "*INVALID*"
+    if {![llength $matches]} {
+        set matches $allLibs
     }
+
+    set ::copyCell_updatingCombo($w) 1
+    $w.libCombo configure -values $matches
+    set ::copyCell_currentValues($w) $matches
+    set ::copyCell_updatingCombo($w) 0
 
     copy_current_cell_dialog_update_command $w $currentLib $currentCell
 }
 
 proc copy_current_cell_dialog_combo_selected {w currentLib currentCell} {
-    set sel $::copyCell_comboDisplay($w)
-
-    # Reflect dropdown choice into entry field
-    set ::copyCell_toLibEntry($w) $sel
-
-    # Restore full list, because combobox selection itself should not filter
-    $w.libCombo configure -values $::copyCell_allLibs($w)
-
-    # Keep display consistent with selected value
-    set ::copyCell_comboDisplay($w) $sel
-
+    set sel [$w.libCombo get]
+    set ::copyCell_toLib($w) $sel
     copy_current_cell_dialog_update_command $w $currentLib $currentCell
 }
 
-proc copy_current_cell_dialog_get_valid_to_library {w currentLib} {
-    set typed [string trim $::copyCell_toLibEntry($w)]
+proc copy_current_cell_dialog_get_valid_to_library {w} {
+    set typed [string trim $::copyCell_toLib($w)]
     set allLibs $::copyCell_allLibs($w)
 
-    if {$typed eq ""} {
-        return $currentLib
-    }
-
     foreach lib $allLibs {
-        if {[string match -nocase ${typed}* $lib]} {
+        if {[string equal -nocase $typed $lib]} {
             return $lib
         }
     }
-
     return ""
 }
 
 proc copy_current_cell_dialog_update_command {w currentLib currentCell} {
-    set toLib [copy_current_cell_dialog_get_valid_to_library $w $currentLib]
+    set toLib [copy_current_cell_dialog_get_valid_to_library $w]
     if {$toLib eq ""} {
-        set toLib "*INVALID*"
+        set toLib [$w.libCombo get]
     }
 
-    set toCell [string trim [$w.nameEnt get]]
+    set toCell [$w.nameEnt get]
 
     set cmd "cell copy -library $currentLib -cell $currentCell -to_library $toLib -to_cell $toCell"
 
@@ -218,7 +195,7 @@ proc copy_current_cell_dialog_update_command {w currentLib currentCell} {
 }
 
 proc copy_current_cell_dialog_do {w currentLib currentCell} {
-    set toLib  [copy_current_cell_dialog_get_valid_to_library $w $currentLib]
+    set toLib  [copy_current_cell_dialog_get_valid_to_library $w]
     set toCell [string trim [$w.nameEnt get]]
 
     if {$toLib eq ""} {
@@ -226,7 +203,7 @@ proc copy_current_cell_dialog_do {w currentLib currentCell} {
             -icon error \
             -type ok \
             -title "Copy Cell" \
-            -message "Please enter a valid destination library."
+            -message "Please choose a valid destination library."
         return
     }
 
@@ -260,7 +237,8 @@ proc copy_current_cell_dialog_do {w currentLib currentCell} {
 
 proc copy_current_cell_dialog_cancel {w} {
     catch {unset ::copyCell_allLibs($w)}
-    catch {unset ::copyCell_toLibEntry($w)}
-    catch {unset ::copyCell_comboDisplay($w)}
+    catch {unset ::copyCell_currentValues($w)}
+    catch {unset ::copyCell_updatingCombo($w)}
+    catch {unset ::copyCell_toLib($w)}
     catch {destroy $w}
 }
