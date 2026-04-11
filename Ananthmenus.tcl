@@ -100,8 +100,12 @@ workspace bindkeys -command {Arrow} -key "Ctrl+Alt+A"
 workspace menu -name {CUSTOM {Useful Commands} {Remove Frame} }  -command {puts "removing frame"; setup schematicpage set -host view -framestyle none }
 workspace bindkeys -command {Remove Frame} -key "Ctrl+Alt+Shift+F"
 
-workspace menu -name {CUSTOM {Useful Commands} {Capture WMF} }  -command {puts "window capture.. wmf"; window capture -format bwmetafile -file {C:\Users\Ananth.Chellappa\Desktop\junk\Tanner\test_capture.wmf} }
-workspace bindkeys -command {Capture WMF} -key "Ctrl+Alt+Shift+C"
+# workspace menu -name {ADDON {Useful Commands} {Capture WMF} }  -command {puts "window capture.. wmf"; window capture -format bwmetafile -file {C:\Users\Ananth.Chellappa\Desktop\junk\Tanner\test_capture.wmf} }
+# workspace bindkeys -command {Capture WMF} -key "Ctrl+Alt+Shift+C"
+# retired - doesn't work anymore. Just dump to PDF from now on..
+
+workspace menu -name {ADDON {Useful Commands} {Goto Change Circle} }  -command {browse_change_circles}
+workspace bindkeys -command {Goto Change Circle} -key "Ctrl+Alt+Shift+C"
 
 # workspace menu -name {CUSTOM {Useful Commands} {Pop} }  -command {pop}
 # workspace bindkeys -command {Pop} -key "Alt+Q"
