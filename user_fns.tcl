@@ -291,12 +291,49 @@ set canteen "dry"
 
 proc open_cell_from_note {} {
 
-    # Read selected text label (may come back as word-list → join)
+    # ------------------------------------------------------------
+    # First priority: if exactly one instance is selected,
+    # open its master cell/master library.
+    # ------------------------------------------------------------
+    set sel [database instances -selected]
+
+    if {[llength $sel] > 1} {
+        return
+    }
+
+    if {[llength $sel] == 1} {
+        set cellName [property get -system -name MasterCell]
+        set libName  [property get -system -name MasterLibrary]
+
+        if {$cellName eq "" || $libName eq ""} {
+            return
+        }
+
+        # Try schematic first, then view0
+        if {![catch {cell open $cellName $libName schematic -activate}]} {
+            return
+        }
+        if {![catch {cell open $cellName $libName view0 -activate}]} {
+            return
+        }
+
+        puts "Could not open cell '$cellName' in library '$libName' (tried views: schematic, view0)."
+        return
+    }
+
+    # ------------------------------------------------------------
+    # Otherwise, fall back to selected text note behavior.
+    # Looks for lib/cell inside the note text.
+    # ------------------------------------------------------------
     set txt [property get Name -system]
-    if {![llength $txt]} { return }
+    if {![llength $txt]} {
+        return
+    }
+
+    # property get may return a word list, so join it
     set s [join $txt " "]
 
-    # Look ONLY for  alphanumeric_or_underscore / alphanumeric_or_underscore
+    # Look ONLY for alphanumeric_or_underscore/alphanumeric_or_underscore
     # Example match: myLib/myCell
     set lib ""
     set cell ""
