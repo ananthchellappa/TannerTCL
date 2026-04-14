@@ -31,6 +31,7 @@ proc mos_op_summary_for_selected {} {
     set context [sed_get_current_context]
     set view    [sed_get_top_view_name]
     set inst    [sed_get_selected_instance_name]
+	set inst [get_msb_instance_name $inst]
 
     if {$inst eq ""} {
         error "No instance selected."
