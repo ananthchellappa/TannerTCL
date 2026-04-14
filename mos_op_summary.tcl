@@ -26,7 +26,7 @@ proc mos_op_summary {lib cell view context instName} {
 }
 
 proc mos_op_summary_for_selected {} {
-    set lib     [sed_get_current_library]
+    set lib     [sed_get_toplevel_lib_name]; # found out the hard way :)
     set cell    [sed_get_top_cell_name]
     set context [sed_get_current_context]
     set view    [sed_get_top_view_name]
