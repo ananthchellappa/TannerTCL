@@ -24,6 +24,9 @@ proc sed_get_current_context {} {
 	return $context
 }
 
+proc sed_get_toplevel_lib_name {} {
+	workspace getactive -toplevel_design 
+}
 
 proc sed_get_current_library {} {
     return [workspace getactive -library]
