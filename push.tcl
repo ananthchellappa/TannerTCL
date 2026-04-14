@@ -9,10 +9,7 @@ proc push {} {
 
     set iname [lindex $sel 0]
 
-    # Handle bussed instances: foo<4:0> → foo<4>
-    if {[regexp {^(.*)<([0-9]+):([0-9]+)>$} $iname -> base i1 i2]} {
-        set iname "${base}<${i1}>"
-    }
+    set iname [get_msb_instance_name $iname]
 
     # Get and normalize current context
     set ctx [workspace getactive -context]
