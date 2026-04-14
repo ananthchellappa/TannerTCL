@@ -250,3 +250,13 @@ proc get_preferred_schematic_view {} {
 
     return [lindex $views 0]
 }
+
+proc get_msb_instance_name {iname} {
+    # If name looks like foo<msb:lsb>, return foo<msb>
+    if {[regexp {^(.*)<([0-9]+):([0-9]+)>$} $iname -> base i1 i2]} {
+        return "${base}<${i1}>"
+    }
+
+    # Otherwise return unchanged
+    return $iname
+}
