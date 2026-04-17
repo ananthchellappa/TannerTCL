@@ -485,61 +485,66 @@ proc _arr_set_inst_xy_iu {instName x y} {
     property set -name Y -system -value $y -units iu
 }
 
+# ---------------------------------------------------------------
+# make_selected_array_uniform
+#
+# Updated to support BOTH:
+#   - 1-D array (single inferred row)
+#   - 2-D array (multiple inferred rows)
+#
+# 1-D case:
+#   - requires at least 2 instances in the inferred row
+#   - extracts X pitch from first two instances
+#   - keeps all Y equal to anchorY
+#
+# 2-D case:
+#   - same behavior as before
+# ---------------------------------------------------------------
+
 proc make_selected_array_uniform {} {
-	mode renderoff
-	_make_selected_array_uniform
-	mode renderon
+    mode renderoff
+    _make_selected_array_uniform
+    mode renderon
 }
 
 proc _make_selected_array_uniform {} {
     set points [_arr_collect_selected_points]
     set n [llength $points]
 
-    if {$n < 4} {
+    if {$n < 2} {
         puts "----------------------------------------"
         puts "Uniformize array"
         puts "----------------------------------------"
-        puts "Need enough selected instances to infer at least two rows."
+        puts "Need at least 2 selected instances."
         return
     }
 
-    # Infer row structure using the previously built row-detection logic.
+    # Infer row structure using the same logic as report_array_row_dimensionality
     set best [_arr_choose_best_row_partition $points]
     set rows [dict get $best rows]
     set rowCount [dict get $best rowCount]
-
-    if {$rowCount < 2} {
-        puts "----------------------------------------"
-        puts "Uniformize array"
-        puts "----------------------------------------"
-        puts "Could not infer at least two rows."
-        puts "Need at least two inferred rows to extract Y pitch."
-        return
-    }
 
     # Normalize row ordering:
     #   rows[0] = bottom row
     #   each row sorted left->right
     set rows [_arr_sort_rows_bottom_to_top $rows]
 
-    set firstRow  [lindex $rows 0]
-    set secondRow [lindex $rows 1]
+    if {[llength $rows] < 1} {
+        puts "----------------------------------------"
+        puts "Uniformize array"
+        puts "----------------------------------------"
+        puts "No inferred rows found."
+        return
+    }
+
+    set firstRow [lindex $rows 0]
 
     if {[llength $firstRow] < 2} {
         puts "----------------------------------------"
         puts "Uniformize array"
         puts "----------------------------------------"
-        puts "First inferred row has fewer than 2 instances."
+        puts "Need at least 2 instances in the first inferred row."
         puts "Cannot extract X pitch."
-        return
-    }
-
-    if {[llength $secondRow] < 1} {
-        puts "----------------------------------------"
-        puts "Uniformize array"
-        puts "----------------------------------------"
-        puts "Second inferred row is empty."
-        puts "Cannot extract Y pitch."
         return
     }
 
@@ -563,18 +568,34 @@ proc _make_selected_array_uniform {} {
         return
     }
 
-    # Y pitch from first instance of first two rows
-    set p20 [lindex $firstRow 0]
-    set p30 [lindex $secondRow 0]
-    set yPitch [expr {abs([lindex $p30 2] - [lindex $p20 2])}]
+    # Y pitch only matters for 2-D
+    set is2D [expr {$rowCount > 1}]
+    set yPitch 0.0
 
-    if {$yPitch == 0} {
-        puts "----------------------------------------"
-        puts "Uniformize array"
-        puts "----------------------------------------"
-        puts "Extracted Y pitch is zero."
-        puts "Cannot build a uniform vertical pitch from first two rows."
-        return
+    if {$is2D} {
+        set secondRow [lindex $rows 1]
+
+        if {[llength $secondRow] < 1} {
+            puts "----------------------------------------"
+            puts "Uniformize array"
+            puts "----------------------------------------"
+            puts "Second inferred row is empty."
+            puts "Cannot extract Y pitch."
+            return
+        }
+
+        set p20 [lindex $firstRow 0]
+        set p30 [lindex $secondRow 0]
+        set yPitch [expr {abs([lindex $p30 2] - [lindex $p20 2])}]
+
+        if {$yPitch == 0} {
+            puts "----------------------------------------"
+            puts "Uniformize array"
+            puts "----------------------------------------"
+            puts "Extracted Y pitch is zero."
+            puts "Cannot build a uniform vertical pitch from first two rows."
+            return
+        }
     }
 
     puts "----------------------------------------"
@@ -585,7 +606,13 @@ proc _make_selected_array_uniform {} {
     puts [format "Anchor instance    : %s" $anchorName]
     puts [format "Anchor location    : (%.3f, %.3f)" $anchorXOld $anchorYOld]
     puts [format "Pitch X            : %.3f" $xPitch]
-    puts [format "Pitch Y            : %.3f" $yPitch]
+    if {$is2D} {
+        puts [format "Pitch Y            : %.3f" $yPitch]
+        puts "Classification     : 2-D"
+    } else {
+        puts "Pitch Y            : n/a (single row)"
+        puts "Classification     : 1-D"
+    }
     puts ""
 
     # Explicitly write anchor back to its original coordinates.
@@ -604,7 +631,7 @@ proc _make_selected_array_uniform {} {
         return
     }
 
-    # Move all instances onto the grid defined by the anchor and pitches.
+    # Move all instances onto the inferred grid
     set movedCount 0
     for {set r 0} {$r < [llength $rows]} {incr r} {
         set row [lindex $rows $r]
@@ -615,7 +642,11 @@ proc _make_selected_array_uniform {} {
             set instName [lindex $p 0]
 
             set targetX [expr {$anchorXOld + $c * $xPitch}]
-            set targetY [expr {$anchorYOld + $r * $yPitch}]
+            if {$is2D} {
+                set targetY [expr {$anchorYOld + $r * $yPitch}]
+            } else {
+                set targetY $anchorYOld
+            }
 
             _arr_set_inst_xy_iu $instName $targetX $targetY
             incr movedCount
@@ -805,6 +836,26 @@ proc name_selected_array_instances {} {
 	mode renderon
 }
 
+# ------------------------------------------------------------
+# Array instance renamer for Tanner S-Edit
+#
+# Updated to use inferred-row logic from report_array_row_dimensionality.
+#
+# 1-D naming:
+#   firstName = SOMENAME      -> SOMENAME_0, SOMENAME_1, ...
+#   firstName = SOMENAME_0    -> SOMENAME_0, SOMENAME_1, ...
+#   firstName = SOMENAME_10   -> SOMENAME_10, SOMENAME_11, ...
+#
+# 2-D naming:
+#   same as before: <stem>_<i>_<j>
+# ------------------------------------------------------------
+
+proc name_selected_array_instances {} {
+    mode renderoff
+    _name_selected_array_instances
+    mode renderon
+}
+
 proc _name_selected_array_instances {} {
     set points [_arr_collect_selected_inst_points]
     set n [llength $points]
@@ -814,19 +865,26 @@ proc _name_selected_array_instances {} {
         return
     }
 
-    set xs [_arr_unique_sorted_coords $points 1]
-    set ys [_arr_unique_sorted_coords $points 2]
+    # Use SAME row inference logic as the reporting utility
+    set best [_arr_choose_best_row_partition $points]
+    set rows [dict get $best rows]
+    set rowCount [dict get $best rowCount]
 
-    set numX [llength $xs]
-    set numY [llength $ys]
+    # Normalize row ordering:
+    #   rows[0] = bottom row
+    #   each row sorted left->right
+    set rows [_arr_sort_rows_bottom_to_top $rows]
 
-    if {$numX > 1 && $numY > 1} {
-        set is2D 1
-    } else {
-        set is2D 0
+    if {[llength $rows] == 0} {
+        puts "No inferred rows found."
+        return
     }
 
-    set firstPoint [_arr_find_first_point $points]
+    set is2D [expr {$rowCount > 1}]
+
+    # "First" instance = leftmost in bottom row
+    set firstRow   [lindex $rows 0]
+    set firstPoint [lindex [_arr_sort_points_by_x $firstRow] 0]
     set firstName  [lindex $firstPoint 0]
 
     if {$is2D} {
@@ -835,17 +893,11 @@ proc _name_selected_array_instances {} {
         lassign [_arr_parse_name_1d $firstName] stem startI
     }
 
-    set info [_arr_build_rowcol_maps $points]
-    lassign $info xs ys xMapList yMapList
-    array set xToCol $xMapList
-    array set yToRow $yMapList
-
     puts "----------------------------------------"
     puts "Array instance renaming"
     puts "----------------------------------------"
     puts "Instances analyzed : $n"
-    puts "Unique X values    : $numX"
-    puts "Unique Y values    : $numY"
+    puts "Estimated rows     : $rowCount"
     puts "Anchor instance    : $firstName"
     puts [format "Anchor location    : (%.3f, %.3f)" \
         [lindex $firstPoint 1] [lindex $firstPoint 2]]
@@ -863,32 +915,32 @@ proc _name_selected_array_instances {} {
     set renamedCount 0
 
     if {$is2D} {
-        set orderedPoints [_arr_group_points_2d $points]
+        # rows are bottom->top; each row left->right
+        for {set r 0} {$r < [llength $rows]} {incr r} {
+            set row [_arr_sort_points_by_x [lindex $rows $r]]
 
-        foreach p $orderedPoints {
-            set oldName [lindex $p 0]
-            set x       [lindex $p 1]
-            set y       [lindex $p 2]
+            for {set c 0} {$c < [llength $row]} {incr c} {
+                set p [lindex $row $c]
+                set oldName [lindex $p 0]
 
-            set col $xToCol($x)
-            set row $yToRow($y)
+                set newI [expr {$startI + $c}]
+                set newJ [expr {$startJ + $r}]
+                set newName "${stem}_${newI}_${newJ}"
 
-            set newI [expr {$startI + $col}]
-            set newJ [expr {$startJ + $row}]
-            set newName "${stem}_${newI}_${newJ}"
+                if {$oldName ne $newName} {
+                    _arr_rename_set_inst_name $oldName $newName
+                }
 
-            if {$oldName ne $newName} {
-                _arr_rename_set_inst_name $oldName $newName
+                puts [format "%s  ->  %s" $oldName $newName]
+                incr renamedCount
             }
-
-            puts [format "%s  ->  %s" $oldName $newName]
-            incr renamedCount
         }
     } else {
-        set orderedPoints [_arr_sort_points_1d $points]
+        # Single inferred row: rename left->right only
+        set row [_arr_sort_points_by_x [lindex $rows 0]]
 
-        for {set k 0} {$k < [llength $orderedPoints]} {incr k} {
-            set p [lindex $orderedPoints $k]
+        for {set k 0} {$k < [llength $row]} {incr k} {
+            set p [lindex $row $k]
             set oldName [lindex $p 0]
             set newName "${stem}_[expr {$startI + $k}]"
 
