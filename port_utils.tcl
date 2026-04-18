@@ -469,34 +469,70 @@ proc respace_selected_ports {ratio} {
 
 
 
-proc increment_port_name_underscored_numbers {name {which_inner first}} {
+proc increment_port_name_underscored_numbers {name {delta 1} {which_inner first}} {
+    if {$delta != 1 && $delta != -1} {
+        error "increment_port_name_underscored_numbers: delta must be 1 or -1"
+    }
+
     set s $name
+    set changed 0
 
     switch -- $which_inner {
         first {
-            # Increment only the first occurrence of _NUMBER_
             if {[regexp {^(.*?)_([0-9]+)_(.*)$} $s -> pre num post]} {
-                set s "${pre}_[expr {$num + 1}]_${post}"
+                if {$delta == 1} {
+                    set repl "_[expr {$num + 1}]_"
+                } else {
+                    if {$num > 0} {
+                        set repl "_[expr {$num - 1}]_"
+                    } else {
+                        set repl "_"
+                    }
+                }
+                set s "${pre}${repl}${post}"
+                set changed 1
             }
         }
 
         last {
-            # Increment only the last occurrence of _NUMBER_
             if {[regexp {^(.*)_([0-9]+)_(.*?)$} $s -> pre num post]} {
-                set s "${pre}_[expr {$num + 1}]_${post}"
+                if {$delta == 1} {
+                    set repl "_[expr {$num + 1}]_"
+                } else {
+                    if {$num > 0} {
+                        set repl "_[expr {$num - 1}]_"
+                    } else {
+                        set repl "_"
+                    }
+                }
+                set s "${pre}${repl}${post}"
+                set changed 1
             }
         }
 
         all {
-            # Increment all occurrences of _NUMBER_
             set out ""
             set rest $s
+            set any_inner 0
             while {[regexp {^(.*?)_([0-9]+)_(.*)$} $rest -> pre num post]} {
-                append out $pre _ [expr {$num + 1}] _
+                append out $pre
+                if {$delta == 1} {
+                    append out _ [expr {$num + 1}] _
+                } else {
+                    if {$num > 0} {
+                        append out _ [expr {$num - 1}] _
+                    } else {
+                        append out _
+                    }
+                }
                 set rest $post
+                set any_inner 1
             }
             append out $rest
-            set s $out
+            if {$any_inner} {
+                set s $out
+                set changed 1
+            }
         }
 
         default {
@@ -504,21 +540,34 @@ proc increment_port_name_underscored_numbers {name {which_inner first}} {
         }
     }
 
-    # Increment trailing _NUMBER
+    # Trailing _NUMBER
     if {[regexp {^(.*)_([0-9]+)$} $s -> pre num]} {
-        set s "${pre}_[expr {$num + 1}]"
+        if {$delta == 1} {
+            set s "${pre}_[expr {$num + 1}]"
+        } else {
+            if {$num > 0} {
+                set s "${pre}_[expr {$num - 1}]"
+            } else {
+                set s $pre
+            }
+        }
+        set changed 1
+    }
+
+    # Virgin name: only initialize on increment
+    if {!$changed && $delta == 1} {
+        append s _0
     }
 
     return $s
 }
 
-# Example usage: default = first
-proc txpose_port_index {} {
-	find port -scope selection -goto none -modify {
-		set old_name [property get -name Name -system]
-		set new_name [increment_port_name_underscored_numbers $old_name]
-		property set -name Name -system -value $new_name
-	}
+proc txpose_port_index {{delta 1}} {
+    find port -scope selection -goto none -modify {
+        set old_name [property get -name Name -system]
+        set new_name [increment_port_name_underscored_numbers $old_name $delta]
+        property set -name Name -system -value $new_name
+    }
 }
 
 # Example usage: all
