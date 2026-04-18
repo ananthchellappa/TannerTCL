@@ -100,11 +100,11 @@ workspace bindkeys -command {Arrow} -key "Ctrl+Alt+A"
 workspace menu -name {CUSTOM {Useful Commands} {Remove Frame} }  -command {puts "removing frame"; setup schematicpage set -host view -framestyle none }
 workspace bindkeys -command {Remove Frame} -key "Ctrl+Alt+Shift+F"
 
-# workspace menu -name {ADDON {Useful Commands} {Capture WMF} }  -command {puts "window capture.. wmf"; window capture -format bwmetafile -file {C:\Users\Ananth.Chellappa\Desktop\junk\Tanner\test_capture.wmf} }
+# workspace menu -name {CUSTOM {Useful Commands} {Capture WMF} }  -command {puts "window capture.. wmf"; window capture -format bwmetafile -file {C:\Users\Ananth.Chellappa\Desktop\junk\Tanner\test_capture.wmf} }
 # workspace bindkeys -command {Capture WMF} -key "Ctrl+Alt+Shift+C"
 # retired - doesn't work anymore. Just dump to PDF from now on..
 
-workspace menu -name {ADDON {Useful Commands} {Goto Change Circle} }  -command {browse_change_circles}
+workspace menu -name {CUSTOM {Useful Commands} {Goto Change Circle} }  -command {browse_change_circles}
 workspace bindkeys -command {Goto Change Circle} -key "Ctrl+Alt+Shift+C"
 
 # workspace menu -name {CUSTOM {Useful Commands} {Pop} }  -command {pop}
@@ -213,7 +213,8 @@ workspace bindkeys -command {Fracture Bus} -key "Ctrl+Alt+F"
 workspace menu -name {CUSTOM Ports {Toggle Port NetLabel} }  -command {tgl_port_lbl}
 workspace bindkeys -command {Toggle Port NetLabel} -key "Ctrl+Shift+T"
 
-workspace menu -name {CUSTOM Ports {Fill Labels} }  -command {fill_labels}
+workspace menu -name {CUSTOM Ports {Fill Labels} }  -command {add_port_labels}
+
 workspace bindkeys -command {Fill Labels} -key "Ctrl+Shift+F"
 workspace menu -name {CUSTOM Ports {make pins} }  -command {make_pins}
 workspace menu -name {CUSTOM Ports {Ports Bigger} }  -command {ports_bigger}
@@ -222,13 +223,21 @@ workspace menu -name {CUSTOM Ports {Ports Bigger} }  -command {ports_bigger}
 workspace menu -name {CUSTOM Ports {Ports Smaller} }  -command {ports_smaller}
 # workspace bindkeys -command {Ports Smaller} -key ""
 
-workspace menu -name {CUSTOM Ports {Increment Pin Spacing} }  -command {incr_y_space}
-workspace bindkeys -command {Increment Pin Spacing} -key "Ctrl+Shift+1"
+workspace menu -name {CUSTOM Ports {Increment Pin Spacing} }  -command {respace_selected_ports 1.2}
+workspace bindkeys -command {Increment Pin Spacing} -key "Ctrl+Shift+Num +"
 
-workspace menu -name {CUSTOM Ports {Decrement Pin Spacing} }  -command {dec_space}
-workspace bindkeys -command {Decrement Pin Spacing} -key "Ctrl+Shift+9"
+workspace menu -name {CUSTOM Ports {Decrement Pin Spacing} }  -command {respace_selected_ports 0.8}
+workspace bindkeys -command {Decrement Pin Spacing} -key "Ctrl+Shift+Num -"
 
 workspace menu -name {CUSTOM Ports {List CSV} }  -command {list_ports_csv}
+
+workspace menu -name {CUSTOM Ports {Equalize Labels and Ports} }  -command {clean_selected_labels_to_nearest_ports}
+workspace bindkeys -command {Equalize Labels and Ports} -key "Ctrl+Alt+L"
+
+workspace menu -name {CUSTOM Ports {Cycle Port Type I,O,IO} }  -command {cycle_port_type}
+workspace bindkeys -command {Cycle Port Type I,O,IO} -key "Ctrl+Shift+Up Arrow"
+
+workspace menu -name {CUSTOM Ports {Sync Bus Widths to Schematic} }  -command {sync_symbol_port_bus_widths_to_schematic}
 
 # Wires
 
@@ -259,6 +268,6 @@ workspace menu -name {CUSTOM Cell {Rename view} }  -command {rename_current_view
 
 workspace menu -name {CUSTOM Cell {Copy Cell} }  -command {copy_current_cell_dialog}
 
-workspace menu -name {ADDON Cell {Make Array Uniform} }  -command {make_selected_array_uniform}
+workspace menu -name {CUSTOM Cell {Make Array Uniform} }  -command {make_selected_array_uniform}
 
-workspace menu -name {ADDON Cell {Name Array Instances} }  -command {name_selected_array_instances}
+workspace menu -name {CUSTOM Cell {Name Array Instances} }  -command {name_selected_array_instances}
