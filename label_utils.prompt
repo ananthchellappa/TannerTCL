@@ -1,0 +1,57 @@
+We wish to create a utility in TCL to be used with Tanner S-Edit It will add textlabels to accompany ports. for this, it is essential to know that the relevant properties of a port are: TextJustification.Direction , TextJustification.Horizontal and TextJustification.Vertical
+
+For each port, get the port's font size using
+
+property get -name FontSize -system
+
+and use that when creating the textlabel
+
+The X, Y of a port retrieved with property get -name X -system (for the example of X) give the port's "location". The TextJustification properties say where the port name is displayed in relation to the X,Y 
+
+Consider these four cases :
+
+TextJustification.Direction : Normal
+TextJustification.Horizontal : Left
+TextJustification.Vertical : Middle
+
+in above case, the port is expected to be on the right edge of the symbol, and the port name text to the right of the X,Y (location). In such a case, the label accompanying the port, which is what is visible when the cell's symbol is instantiated, is physically to the left of the port's X,Y (i.e., same Y, X lower). In this case, the X of the label can be one snap grid plus "whisker-length" times snap grid spacing value to the left of the port X. The only TextJustification parameter that will be different for the label is TextJustification.Horizontal , which will be "Right", in this case.
+
+In such a case, the label can be created using following TCL :
+
+mode draw textlabel
+textlabel -text $port_name -hjustify right -vjustify middle -direction normal -size $port_fontsize -confirm false -units iu
+point click [expr ($X-$offset)] [expr ($Y)] -units iu
+mode escape
+# end TCL
+
+the $offset would be snap-grid + whisker-length ( an argument to the utility, default = 2)
+
+case 2 : 
+
+TextJustification.Direction : Normal
+TextJustification.Horizontal : Right
+TextJustification.Vertical : Middle
+
+In this case, the label will be located physically to the right of the port's X,Y and the port is expected to be on the left-edge of the symbol. In such a case, "-hjustify left" would be used when creating the label
+
+case 3 : 
+
+
+TextJustification.Direction : Down
+TextJustification.Horizontal : Center
+TextJustification.Vertical : Top
+
+this is a case in which the port is expected to be on the bottom edge of the symbol and the label would be placed physically on top of the port, so Y_label = Y_port + snap-grid * (1 + whisker-length)
+
+The parameters to be used with the label during creation :
+
+-hjustify Center -vjustify Bottom -direction down
+
+case 4 : 
+
+TextJustification.Direction : Down
+TextJustification.Horizontal : Center
+TextJustification.Vertical : Bottom
+
+This is for the port being on the top edge of the symbol and the label would be placed physically below it. Here "-vjustify Top" would be used with the textlabel command
+
