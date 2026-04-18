@@ -466,3 +466,71 @@ proc respace_selected_ports {ratio} {
     change_selected_port_spacing_by_ratio $ratio
     mode renderon
 }
+
+
+
+proc increment_port_name_underscored_numbers {name {which_inner first}} {
+    set s $name
+
+    switch -- $which_inner {
+        first {
+            # Increment only the first occurrence of _NUMBER_
+            if {[regexp {^(.*?)_([0-9]+)_(.*)$} $s -> pre num post]} {
+                set s "${pre}_[expr {$num + 1}]_${post}"
+            }
+        }
+
+        last {
+            # Increment only the last occurrence of _NUMBER_
+            if {[regexp {^(.*)_([0-9]+)_(.*?)$} $s -> pre num post]} {
+                set s "${pre}_[expr {$num + 1}]_${post}"
+            }
+        }
+
+        all {
+            # Increment all occurrences of _NUMBER_
+            set out ""
+            set rest $s
+            while {[regexp {^(.*?)_([0-9]+)_(.*)$} $rest -> pre num post]} {
+                append out $pre _ [expr {$num + 1}] _
+                set rest $post
+            }
+            append out $rest
+            set s $out
+        }
+
+        default {
+            error "increment_port_name_underscored_numbers: which_inner must be first, last, or all"
+        }
+    }
+
+    # Increment trailing _NUMBER
+    if {[regexp {^(.*)_([0-9]+)$} $s -> pre num]} {
+        set s "${pre}_[expr {$num + 1}]"
+    }
+
+    return $s
+}
+
+# Example usage: default = first
+proc txpose_port_index {} {
+	find port -scope selection -goto none -modify {
+		set old_name [property get -name Name -system]
+		set new_name [increment_port_name_underscored_numbers $old_name]
+		property set -name Name -system -value $new_name
+	}
+}
+
+# Example usage: all
+# find port -scope selection -modify {
+#     set old_name [property get -name Name -system]
+#     set new_name [increment_port_name_underscored_numbers $old_name all]
+#     property set -name Name -system -value $new_name
+# }
+
+# Example usage: last
+# find port -scope selection -modify {
+#     set old_name [property get -name Name -system]
+#     set new_name [increment_port_name_underscored_numbers $old_name last]
+#     property set -name Name -system -value $new_name
+# }
