@@ -124,7 +124,7 @@ proc apl_process_one_port {port_entry offset} {
 
 
 proc add_port_labels {{whisker_length 2}} {
-
+    mode renderoff
     set sel_count [find port -scope selection -count -goto none]
 
     if {$sel_count > 0} {
@@ -154,4 +154,5 @@ proc add_port_labels {{whisker_length 2}} {
     }
 
     mode escape
+    mode renderon
 }
