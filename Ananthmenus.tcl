@@ -239,6 +239,12 @@ workspace bindkeys -command {Cycle Port Type I,O,IO} -key "Ctrl+Shift+Up Arrow"
 
 workspace menu -name {CUSTOM Ports {Sync Bus Widths to Schematic} }  -command {sync_symbol_port_bus_widths_to_schematic}
 
+workspace menu -name {CUSTOM Ports {Incr Port Index} }  -command {txpose_port_index}
+workspace bindkeys -command {Incr Port Index} -key "Alt+Page Up"
+
+workspace menu -name {CUSTOM Ports {Decr Port Index} }  -command {txpose_port_index -1}
+workspace bindkeys -command {Decr Port Index} -key "Alt+Page Down"
+
 # Wires
 
 workspace menu -name {CUSTOM Wires {Stubs Hor+Ver Labels} }  -command {make_stubs}
