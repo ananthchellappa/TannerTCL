@@ -1,4 +1,4 @@
-TCL code that can boost productivity in the really challenging Tanner tool suite - only S-Edit addressed here..
+TCL code that can boost productivity in the Tanner tool suite - only S-Edit addressed here..
 
 Some very old code - done manually. Mostly new code from chatGPT. Some prompts included.
 
