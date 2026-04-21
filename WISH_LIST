@@ -1,0 +1,11 @@
+In Cadence, anything is an object. You can get a handle to refer to it. For example, you select something in the schematic (or symbol, or waveform viewer). You do
+
+o = car(geGetSelSet())
+
+You can then do
+
+o~>?
+
+To see the list of properties this object has.
+
+If something like this were available with Tanner TCL, it would boost scripting capability a LOT.
