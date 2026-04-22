@@ -20,6 +20,7 @@
 #   - Move order avoids temporary overlap problems:
 #         * increasing spacing -> farthest from anchor first
 #         * decreasing spacing -> nearest to anchor first
+#  if you get # SED  Could not reselect port NAME at (17150,22550) - check you don't have one on top of the other
 # ============================================================
 
 
