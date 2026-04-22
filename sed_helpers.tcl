@@ -260,3 +260,52 @@ proc get_msb_instance_name {iname} {
     # Otherwise return unchanged
     return $iname
 }
+
+proc get_X { } {
+	return [property get -name X -system]
+}
+
+proc get_Y { } {
+	return [property get -name Y -system]
+}
+
+proc get_num_selected_netlabels { } {
+	return [find netlabel -scope selection -count -goto none -add]
+}
+
+proc get_num_selected_objects { } {
+	return [find all -scope selection -count -goto none]
+}
+
+proc get_cursor_pos_in_iu {} {
+	mode renderoff
+	set save_units [setup schematicunits get -displayunits]
+	setup schematicunits set -displayunits iu
+	set cursor_pos [workspace getcursorposition]
+	setup schematicunits set -displayunits $save_units
+	mode renderon
+	return $cursor_pos; # will return x and y as list of 2 elements
+}
+
+# Returns a dict whose keys are "{x y}" and whose values are the netlabel names.
+# Example returned dict:
+#   {100 200} NET_A  {300 400} NET_B
+
+proc get_selected_netlabels_by_location {} {
+    set rows {}
+
+    set filterScript {
+        set x [property get -name X -system]
+        set y [property get -name Y -system]
+        set name [property get -name Name -system]
+
+        lappend rows [list [list $x $y] $name]
+
+        expr {1}
+    }
+
+    find netlabel -scope selection -filter $filterScript -goto none
+
+    return $rows
+}
+
