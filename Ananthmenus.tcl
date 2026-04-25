@@ -234,8 +234,11 @@ workspace menu -name {CUSTOM Ports {List CSV} }  -command {list_ports_csv}
 workspace menu -name {CUSTOM Ports {Equalize Labels and Ports} }  -command {clean_selected_labels_to_nearest_ports}
 workspace bindkeys -command {Equalize Labels and Ports} -key "Ctrl+Alt+L"
 
-workspace menu -name {CUSTOM Ports {Cycle Port Type I,O,IO} }  -command {cycle_port_type}
-workspace bindkeys -command {Cycle Port Type I,O,IO} -key "Ctrl+Shift+Up Arrow"
+workspace menu -name {ADDON Ports {Cycle Port/Netlabel Next} }  -command {cycle_port_or_netlabel}
+workspace bindkeys -command {Cycle Port/Netlabel Next} -key "Ctrl+Shift+Up Arrow"
+
+workspace menu -name {ADDON Ports {Cycle Port/Netlabel Prev} }  -command {cycle_port_or_netlabel 0}
+workspace bindkeys -command {Cycle Port/Netlabel Prev} -key "Ctrl+Shift+Down Arrow"
 
 workspace menu -name {CUSTOM Ports {Sync Bus Widths to Schematic} }  -command {sync_symbol_port_bus_widths_to_schematic}
 
