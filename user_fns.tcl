@@ -222,13 +222,61 @@ proc _dwn_id {} {
 }
 
 proc _up_bus {} {
-	find all -scope selection -add -goto none -modify { if { [regexp {^(.*?)<(\d+):(\d+)>$} [property get -system Name] all name m n] } {; incr m; incr n; property set -system Name -value $name<$m:$n>; } }
-	find all -scope selection -add -goto none -modify { if { [regexp {^(.*?)<(\d+)>$} [property get -system Name] all name m ] } {; incr m; property set -system Name -value $name<$m>; } }
+
+    find all -scope selection -add -goto none -modify {
+        set curr_name [property get -system Name]
+
+        if { [regexp {^(.*?)<(\d+):(\d+)>$} $curr_name all name m n] } {
+
+            incr m
+            incr n
+            property set -system Name -value "$name<$m:$n>"
+
+        } elseif { [regexp {^(.*?)<(\d+)>$} $curr_name all name m] } {
+
+            incr m
+            property set -system Name -value "$name<$m>"
+
+        } else {
+
+            property set -system Name -value "$curr_name<0>"
+        }
+    }
 }
 
 proc _dwn_bus {} {
-	find all -scope selection -add -goto none -modify { if { [regexp {^(.*?)<(\d+):(\d+)>$} [property get -system Name] all name m n] } {; set m [expr $m-1]; set n [expr $n-1]; property set -system Name -value $name<$m:$n>; } }
-	find all -scope selection -add -goto none -modify { if { [regexp {^(.*?)<(\d+)>$} [property get -system Name] all name m ] } {; set m [expr $m-1]; property set -system Name -value $name<$m>; } }
+
+    find all -scope selection -add -goto none -modify {
+        set curr_name [property get -system Name]
+
+        if { [regexp {^(.*?)<(\d+):(\d+)>$} $curr_name all name m n] } {
+
+            # Do NOT modify buses whose low index is already 0:
+            # something<N:0> stays something<N:0>
+            if {$n == 0} {
+                return
+            }
+
+            set m [expr {$m - 1}]
+            set n [expr {$n - 1}]
+
+            if {($m == 0) && ($n == -1)} {
+                property set -system Name -value $name
+            } else {
+                property set -system Name -value "$name<$m:$n>"
+            }
+
+        } elseif { [regexp {^(.*?)<(\d+)>$} $curr_name all name m] } {
+
+            set m [expr {$m - 1}]
+
+            if {$m == -1} {
+                property set -system Name -value $name
+            } else {
+                property set -system Name -value "$name<$m>"
+            }
+        }
+    }
 }
 
 proc _rmv_bus {} {
