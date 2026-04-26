@@ -8,7 +8,7 @@ proc tgl_port_lbl {} {
     delete
     mode renderoff
 
-    set dsn [database design -active]
+    set dsn [workspace getactive -toplevel_design]
     tgl_port_lbl_load_selection_into_scratchpad $dsn
 
     set plist [database ports]
