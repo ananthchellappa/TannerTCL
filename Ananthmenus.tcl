@@ -280,3 +280,6 @@ workspace menu -name {CUSTOM Cell {Copy Cell} }  -command {copy_current_cell_dia
 workspace menu -name {CUSTOM Cell {Make Array Uniform} }  -command {make_selected_array_uniform}
 
 workspace menu -name {CUSTOM Cell {Name Array Instances} }  -command {name_selected_array_instances}
+
+workspace menu -name {CUSTOM Cell {Re-instantiate selected} }  -command {re_place_selected_instances}
+workspace bindkeys -command {Re-instantiate selected} -key "Ctrl+Alt+Shift+R"
