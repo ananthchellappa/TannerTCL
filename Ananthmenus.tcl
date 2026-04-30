@@ -179,6 +179,14 @@ workspace bindkeys -command {Print i Cmd} -key "Ctrl+Alt+Shift+I"
 workspace menu -name {CUSTOM {Simulations} {OP Info Summary} }  -command {puts [mos_op_summary_for_selected]}
 workspace bindkeys -command {OP Info Summary} -key "Ctrl+Alt+1"
 
+workspace menu -name {CUSTOM {Simulations} {Display OP Info} }  -command {mode -paramevalstyle op}
+workspace bindkeys -command {Display OP Info} -key "6"
+
+workspace menu -name {CUSTOM {Simulations} {Display Node Voltages} }  -command {mode -propevalstyle voltage}
+workspace bindkeys -command {Display Node Voltages} -key "Alt+6"
+
+workspace menu -name {CUSTOM {Simulations} {Display Defaults} }  -command {mode -propevalstyle none; mode -paramevalstyle instance}
+workspace bindkeys -command {Display Defaults} -key "Ctrl+6"
 
 # Bus
 
