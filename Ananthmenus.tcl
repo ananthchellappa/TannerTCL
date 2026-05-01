@@ -152,6 +152,9 @@ workspace bindkeys -command {Delete Circles} -key "Ctrl+Shift+D"
 workspace menu -name {CUSTOM {Useful Commands} {Increase snap grid} }  -command {scale_snap_grid { 2.0 }}
 workspace bindkeys -command {Increase snap grid} -key "Alt+Up Arrow"
 
+workspace menu -name {CUSTOM {Useful Commands} {Toggle Case} }  -command {toggle_case}
+workspace bindkeys -command {Toggle Case} -key "Ctrl+Alt+5"
+
 # simulation aids..
 
 workspace menu -name {CUSTOM {Simulations} {Display Node V} }  -command {mode -propevalstyle voltage}
