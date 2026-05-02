@@ -124,6 +124,10 @@ proc apl_process_one_port {port_entry offset} {
 
 
 proc add_port_labels {{whisker_length 2}} {
+	if {"schematic" eq [sed_get_current_view_type]} {
+		puts "Sure? Adding port labels is usually done only for symbols:)"
+		return
+	}
     mode renderoff
     set sel_count [find port -scope selection -count -goto none]
 
