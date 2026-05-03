@@ -38,8 +38,8 @@ proc re_place_selected_instances {} {
         property set -name Name   -value $name   -system
         property set -name Mirror -value $mirror -system
         property set -name Angle  -value $angle  -system
-		property set -name X  -value $x  -system
-		property set -name Y  -value $y  -system
+		property set -name X  -value $x  -system -units iu
+		property set -name Y  -value $y  -system -units iu
     }
 	mode renderon
 }
