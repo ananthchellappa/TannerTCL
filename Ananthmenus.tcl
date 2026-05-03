@@ -127,6 +127,9 @@ workspace bindkeys -command {Open Cell from Note} -key "Ctrl+Shift+N"
 workspace menu -name {CUSTOM {Useful Commands} {Select Similar} }  -command {select_similar_instances }
 workspace bindkeys -command {Select Similar} -key "Ctrl+Alt+H"
 
+workspace menu -name {CUSTOM {Useful Commands} {Select Same Lib} }  -command {select_same_lib }
+workspace bindkeys -command {Select Same Lib} -key "Ctrl+Alt+Shift+L"
+
 workspace menu -name {CUSTOM {Useful Commands} {Print Lib/Cell} }  -command {print_libcell_from_selection_or_active}
 workspace bindkeys -command {Print Lib/Cell} -key "Alt+Shift+C"
 
