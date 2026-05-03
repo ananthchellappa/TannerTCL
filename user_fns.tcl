@@ -20,7 +20,6 @@ proc user1 {} {
   }
 }
 
-
 proc user10 {} {
 	window close
 }
@@ -51,11 +50,7 @@ proc res_grid {} {
 }
 
 # updated 6/10/2015 to handle selections.. # then 6/25/2015 to be able to get instant undo
-proc scale_text { up } {
-	find port -scope selection -add -goto none -regex -modify {property set FontSize -system -units iu -value [expr (1.1**$up)*([property get FontSize -system]) ]}
-	find netlabel -scope selection -add -goto none -regex -modify {property set FontSize -system -units iu -value [expr (1.1**$up)*([property get FontSize -system]) ]}
-	find textlabel -scope selection -add -goto none -regex -modify {property set FontSize -system -units iu -value [expr (1.1**$up)*([property get FontSize -system]) ]}
-}
+# removed and font_utilt.tcl contains new version from chatGPT proc scale_text { up } {
 
 proc user2 {} {
     find none
