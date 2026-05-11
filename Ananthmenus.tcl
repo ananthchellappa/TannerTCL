@@ -98,7 +98,7 @@ workspace menu -name {CUSTOM {Useful Commands} {Arrow} }  -command {puts arrow; 
 workspace bindkeys -command {Arrow} -key "Ctrl+Alt+A"
 
 workspace menu -name {CUSTOM {Useful Commands} {Remove Frame} }  -command {puts "removing frame"; setup schematicpage set -host view -framestyle none }
-workspace bindkeys -command {Remove Frame} -key "Ctrl+Alt+Shift+F"
+workspace bindkeys -command {Remove Frame} -key "Alt+Shift+F"
 
 # workspace menu -name {CUSTOM {Useful Commands} {Capture WMF} }  -command {puts "window capture.. wmf"; window capture -format bwmetafile -file {C:\Users\Ananth.Chellappa\Desktop\junk\Tanner\test_capture.wmf} }
 # workspace bindkeys -command {Capture WMF} -key "Ctrl+Alt+Shift+C"
@@ -248,10 +248,10 @@ workspace menu -name {CUSTOM Ports {List CSV} }  -command {list_ports_csv}
 workspace menu -name {CUSTOM Ports {Equalize Labels and Ports} }  -command {clean_selected_labels_to_nearest_ports}
 workspace bindkeys -command {Equalize Labels and Ports} -key "Ctrl+Alt+L"
 
-workspace menu -name {ADDON Ports {Cycle Port/Netlabel Next} }  -command {cycle_port_or_netlabel}
+workspace menu -name {CUSTOM Ports {Cycle Port/Netlabel Next} }  -command {cycle_port_or_netlabel}
 workspace bindkeys -command {Cycle Port/Netlabel Next} -key "Ctrl+Shift+Up Arrow"
 
-workspace menu -name {ADDON Ports {Cycle Port/Netlabel Prev} }  -command {cycle_port_or_netlabel 0}
+workspace menu -name {CUSTOM Ports {Cycle Port/Netlabel Prev} }  -command {cycle_port_or_netlabel 0}
 workspace bindkeys -command {Cycle Port/Netlabel Prev} -key "Ctrl+Shift+Down Arrow"
 
 workspace menu -name {CUSTOM Ports {Sync Bus Widths to Schematic} }  -command {sync_symbol_port_bus_widths_to_schematic}
@@ -261,6 +261,15 @@ workspace bindkeys -command {Incr Port Index} -key "Alt+Page Up"
 
 workspace menu -name {CUSTOM Ports {Decr Port Index} }  -command {txpose_port_index -1}
 workspace bindkeys -command {Decr Port Index} -key "Alt+Page Down"
+
+workspace menu -name {CUSTOM Ports {Get Suffix} }  -command {get_suffix}
+workspace bindkeys -command {Get Suffix} -key "Ctrl+Alt+Shift+G"
+
+workspace menu -name {CUSTOM Ports {Add Suffix} }  -command {add_suffix}
+workspace bindkeys -command {Add Suffix} -key "Ctrl+Alt+Shift+F"
+
+workspace menu -name {CUSTOM Ports {Remove Suffix} }  -command {remove_suffix}
+workspace bindkeys -command {Remove Suffix} -key "Ctrl+Alt+Shift+E"
 
 # Wires
 
@@ -297,3 +306,4 @@ workspace menu -name {CUSTOM Cell {Name Array Instances} }  -command {name_selec
 
 workspace menu -name {CUSTOM Cell {Re-instantiate selected} }  -command {re_place_selected_instances}
 workspace bindkeys -command {Re-instantiate selected} -key "Ctrl+Alt+Shift+R"
+
