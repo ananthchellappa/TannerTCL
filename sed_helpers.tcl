@@ -292,6 +292,9 @@ proc get_cursor_pos_in_iu {} {
 #   {100 200} NET_A  {300 400} NET_B
 
 proc get_selected_netlabels_by_location {} {
+# classic example of using the find command with -filter to build up a table since
+# it loops over objects. The script just has to return 1 so that no filtering is 
+# performed, if starting with selected objects
     set rows {}
 
     set filterScript {
