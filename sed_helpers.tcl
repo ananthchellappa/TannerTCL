@@ -416,3 +416,193 @@ proc instance_pins_in_parent_frame {lib cell view inst_name instX instY angle mi
 
     return $out
 }
+
+# Find the pin (across all visible instances) nearest to the current cursor.
+# Returns a flat 12-element list:
+#   {lib cell view inst_name pin_name pinX pinY instX instY angle mirror scaling}
+# pinX,pinY are in the current frame (iu); the trailing fields describe the
+# instance transform and let downstream callers (e.g. orientation lookup,
+# wire stub placement) reuse the same transform without re-querying.
+# Returns {} if there are no visible instances or no pins.
+proc nearest_pin_to_cursor {} {
+    set cursor [get_cursor_pos_in_iu]
+    if {[llength $cursor] != 2} {
+        return {}
+    }
+    lassign $cursor cx cy
+
+    set insts [visible_instances]
+    if {![llength $insts]} {
+        return {}
+    }
+
+    set best    {}
+    set best_d2 ""
+
+    foreach row $insts {
+        # row: {lib cell view inst_name X Y Angle Mirror Scaling}
+        lassign $row lib cell view iname ix iy angle mirror scaling
+
+        set pins [instance_pins_in_parent_frame \
+            $lib $cell $view $iname $ix $iy $angle $mirror $scaling]
+
+        foreach p $pins {
+            set pname [lindex $p 0]
+            set loc   [lindex $p 1]
+            set px    [lindex $loc 0]
+            set py    [lindex $loc 1]
+
+            set dx [expr {$px - $cx}]
+            set dy [expr {$py - $cy}]
+            set d2 [expr {$dx*$dx + $dy*$dy}]
+
+            if {$best_d2 eq "" || $d2 < $best_d2} {
+                set best_d2 $d2
+                set best [list $lib $cell $view $iname $pname $px $py \
+                               $ix $iy $angle $mirror $scaling]
+            }
+        }
+    }
+
+    return $best
+}
+
+# Map a port's TextJustification triplet to the compass direction the port
+# faces in its symbol's local frame. Returns one of east/west/north/south,
+# or "" if the triplet isn't one of the four supported edge cases.
+proc _port_base_compass {dir hjust vjust} {
+    switch -- "$dir|$hjust|$vjust" {
+        "Normal|Left|Middle"  { return east  }
+        "Normal|Right|Middle" { return west  }
+        "Down|Center|Top"     { return south }
+        "Down|Center|Bottom"  { return north }
+        default               { return ""    }
+    }
+}
+
+# Apply an instance's angle (CW degrees) and mirror (Y-axis, after rotate)
+# to a base compass direction. Returns east/west/north/south, or "" if the
+# input is invalid.
+proc _xform_compass {orient angle mirror} {
+    switch -- $orient {
+        east    { set dx  1; set dy  0 }
+        west    { set dx -1; set dy  0 }
+        north   { set dx  0; set dy  1 }
+        south   { set dx  0; set dy -1 }
+        default { return "" }
+    }
+
+    switch -- $angle {
+        0   { set rx $dx;            set ry $dy           }
+        90  { set rx $dy;            set ry [expr {-$dx}] }
+        180 { set rx [expr {-$dx}];  set ry [expr {-$dy}] }
+        270 { set rx [expr {-$dy}];  set ry $dx           }
+        default {
+            set theta [expr {$angle * 3.14159265358979323846 / 180.0}]
+            set c [expr {cos($theta)}]
+            set s [expr {sin($theta)}]
+            set rx [expr {round($dx*$c + $dy*$s)}]
+            set ry [expr {round(-$dx*$s + $dy*$c)}]
+        }
+    }
+
+    if {[string is true -strict $mirror]} {
+        set rx [expr {-$rx}]
+    }
+
+    if {$rx ==  1 && $ry ==  0} { return east  }
+    if {$rx == -1 && $ry ==  0} { return west  }
+    if {$rx ==  0 && $ry ==  1} { return north }
+    if {$rx ==  0 && $ry == -1} { return south }
+    return ""
+}
+
+# Return the outward direction (east/west/north/south) the given pin
+# faces in the parent (current) frame of reference.
+#
+# pinX/pinY (parent frame) disambiguate among duplicate-named ports in
+# the symbol -- e.g. supplies that appear multiple times, or pass-through
+# pins shown on both edges. We open the symbol view briefly, collect every
+# port's name+local-XY+TextJustification, transform each candidate's local
+# XY to the parent frame (same chain as instance_pins_in_parent_frame),
+# and pick the one closest to pinX,pinY.
+proc pin_orientation_in_parent_frame {lib cell view pin_name pinX pinY instX instY angle mirror scaling} {
+
+    mode renderoff
+    cell open -cell $cell -design $lib -view $view -newwindow
+
+    set ports {}
+    set filterScript {
+        set n      [property get -name Name -system]
+        set lx     [property get -name X -system]
+        set ly     [property get -name Y -system]
+        set ddir   [property get -name TextJustification.Direction  -system]
+        set dhjust [property get -name TextJustification.Horizontal -system]
+        set dvjust [property get -name TextJustification.Vertical   -system]
+        lappend ports [list $n $lx $ly $ddir $dhjust $dvjust]
+        expr {1}
+    }
+    find port -scope view -filter $filterScript -goto none
+
+    window close
+    mode renderon
+
+    if {![llength $ports]} {
+        puts "pin_orientation_in_parent_frame: no ports in $lib/$cell/$view"
+        return ""
+    }
+
+    set mflag [string is true -strict $mirror]
+
+    set best_triplet ""
+    set best_d2 ""
+
+    foreach row $ports {
+        lassign $row n lx ly ddir dhjust dvjust
+        if {$n ne $pin_name} { continue }
+
+        # local -> parent transform (mirrors instance_pins_in_parent_frame;
+        # keep the two in sync if either is corrected).
+        set sx [expr {$lx * $scaling}]
+        set sy [expr {$ly * $scaling}]
+        switch -- $angle {
+            0   { set rx $sx;            set ry $sy           }
+            90  { set rx $sy;            set ry [expr {-$sx}] }
+            180 { set rx [expr {-$sx}];  set ry [expr {-$sy}] }
+            270 { set rx [expr {-$sy}];  set ry $sx           }
+            default {
+                set theta [expr {$angle * 3.14159265358979323846 / 180.0}]
+                set c [expr {cos($theta)}]
+                set s [expr {sin($theta)}]
+                set rx [expr {$sx*$c + $sy*$s}]
+                set ry [expr {-$sx*$s + $sy*$c}]
+            }
+        }
+        if {$mflag} { set rx [expr {-$rx}] }
+        set fx [expr {$rx + $instX}]
+        set fy [expr {$ry + $instY}]
+
+        set dx [expr {$fx - $pinX}]
+        set dy [expr {$fy - $pinY}]
+        set d2 [expr {$dx*$dx + $dy*$dy}]
+
+        if {$best_d2 eq "" || $d2 < $best_d2} {
+            set best_d2 $d2
+            set best_triplet [list $ddir $dhjust $dvjust]
+        }
+    }
+
+    if {$best_triplet eq ""} {
+        puts "pin_orientation_in_parent_frame: no port named '$pin_name' in $lib/$cell/$view"
+        return ""
+    }
+
+    lassign $best_triplet ddir dhjust dvjust
+    set base [_port_base_compass $ddir $dhjust $dvjust]
+    if {$base eq ""} {
+        puts "pin_orientation_in_parent_frame: unsupported TextJustification for '$pin_name': $ddir|$dhjust|$dvjust"
+        return ""
+    }
+
+    return [_xform_compass $base $angle $mirror]
+}
