@@ -348,3 +348,71 @@ proc visible_instances {} {
 
     return $rows
 }
+
+# Transform a symbol's pin locations into the current (parent) frame of
+# reference, given how the instance is placed.
+#
+# Inputs:
+#   lib, cell, view         master cell to query for pin locations
+#   inst_name               instance name (carried for the caller's benefit;
+#                           used only to label warnings)
+#   instX, instY            instance origin in the parent frame
+#   angle                   Angle property: 0/90/180/270. Rotation is CCW
+#                           with the property reading "minus the angle":
+#                           Angle 270 = 90 deg CCW; Angle 90 = 270 deg CCW.
+#                           (Equivalently: Angle is degrees CW.)
+#   mirror                  Mirror property: true/false. Y-axis mirror
+#                           (x -> -x), applied AFTER rotation.
+#   scaling                 Scaling property (e.g. 1.0, 0.5)
+#
+# Returns: list of {pin_name {X Y}} pairs, same shape as
+#   database ports ... -name -location, but with X,Y in the parent frame.
+proc instance_pins_in_parent_frame {lib cell view inst_name instX instY angle mirror scaling} {
+    set raw [database ports -library $lib -cell $cell -view $view -name -location]
+    if {![llength $raw]} {
+        puts "instance_pins_in_parent_frame: no ports found for $lib/$cell/$view (instance $inst_name)"
+        return {}
+    }
+
+    set mflag [string is true -strict $mirror]
+
+    set out {}
+    foreach p $raw {
+        set pname [lindex $p 0]
+        set loc   [lindex $p 1]
+        set px    [lindex $loc 0]
+        set py    [lindex $loc 1]
+
+        # 1) Scale
+        set px [expr {$px * $scaling}]
+        set py [expr {$py * $scaling}]
+
+        # 2) Rotate (Angle is degrees CW; multiples of 90 in practice)
+        switch -- $angle {
+            0   { set rx $px;            set ry $py           }
+            90  { set rx $py;            set ry [expr {-$px}] }
+            180 { set rx [expr {-$px}];  set ry [expr {-$py}] }
+            270 { set rx [expr {-$py}];  set ry $px           }
+            default {
+                set theta [expr {$angle * 3.14159265358979323846 / 180.0}]
+                set c [expr {cos($theta)}]
+                set s [expr {sin($theta)}]
+                set rx [expr {$px*$c + $py*$s}]
+                set ry [expr {-$px*$s + $py*$c}]
+            }
+        }
+
+        # 3) Mirror across Y-axis (flip X), AFTER rotate
+        if {$mflag} {
+            set rx [expr {-$rx}]
+        }
+
+        # 4) Translate by instance origin
+        set fx [expr {$rx + $instX}]
+        set fy [expr {$ry + $instY}]
+
+        lappend out [list $pname [list $fx $fy]]
+    }
+
+    return $out
+}
