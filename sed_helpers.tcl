@@ -40,6 +40,41 @@ proc sed_get_top_view_name {} {
     return [workspace getactive -toplevel_view]
 }
 
+# Return a list of rows describing every instance in the current viewport.
+# Each row: {master_library master_cell instance_name X Y Angle Mirror}
+# Uses partiallyenclosed so instances clipped at the edge are included.
+proc visible_instances {} {
+    set vp [win_viewportrect_iu]
+    if {[llength $vp] != 4} {
+        return {}
+    }
+    lassign $vp x0 y0 x1 y1
+
+    set rows {}
+
+    set filterScript {
+        set lib    [property get -name MasterLibrary -system]
+        set cell   [property get -name MasterCell    -system]
+        set name   [property get -name Name          -system]
+        set x      [property get -name X             -system]
+        set y      [property get -name Y             -system]
+        set angle  [property get -name Angle         -system]
+        set mirror [property get -name Mirror        -system]
+
+        lappend rows [list $lib $cell $name $x $y $angle $mirror]
+
+        expr {1}
+    }
+
+    find instance -scope view \
+        -x0 $x0 -y0 $y0 -x1 $x1 -y1 $y1 \
+        -selectionmode partiallyenclosed \
+        -goto none \
+        -filter $filterScript
+
+    return $rows
+}
+
 proc sed_get_selected_instance_name {} {
     return [property get -system -name Name]
 }
