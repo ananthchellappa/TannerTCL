@@ -313,7 +313,7 @@ proc get_selected_netlabels_by_location {} {
 }
 
 # Return a list of rows describing every instance in the current viewport.
-# Each row: {master_library master_cell master_view instance_name X Y Angle Mirror}
+# Each row: {master_library master_cell master_view instance_name X Y Angle Mirror Scaling}
 # Uses partiallyenclosed so instances clipped at the edge are included.
 proc visible_instances {} {
     set vp [win_viewportrect_iu]
@@ -325,16 +325,17 @@ proc visible_instances {} {
     set rows {}
 
     set filterScript {
-        set lib    [property get -name MasterLibrary -system]
-        set cell   [property get -name MasterCell    -system]
-        set view   [property get -name MasterView    -system]
-        set name   [property get -name Name          -system]
-        set x      [property get -name X             -system]
-        set y      [property get -name Y             -system]
-        set angle  [property get -name Angle         -system]
-        set mirror [property get -name Mirror        -system]
+        set lib     [property get -name MasterLibrary -system]
+        set cell    [property get -name MasterCell    -system]
+        set view    [property get -name MasterView    -system]
+        set name    [property get -name Name          -system]
+        set x       [property get -name X             -system]
+        set y       [property get -name Y             -system]
+        set angle   [property get -name Angle         -system]
+        set mirror  [property get -name Mirror        -system]
+        set scaling [property get -name Scaling       -system]
 
-        lappend rows [list $lib $cell $view $name $x $y $angle $mirror]
+        lappend rows [list $lib $cell $view $name $x $y $angle $mirror $scaling]
 
         expr {1}
     }
