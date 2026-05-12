@@ -343,7 +343,7 @@ proc visible_instances {} {
     find instance -scope view \
         -x0 $x0 -y0 $y0 -x1 $x1 -y1 $y1 \
         -selectionmode partiallyenclosed \
-        -goto none \
+        -goto none -units iu \
         -filter $filterScript
 
     return $rows
