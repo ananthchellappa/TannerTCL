@@ -435,7 +435,6 @@ proc nearest_pin_to_cursor {} {
     set insts [visible_instances]
 	find none
 	mode renderon
-	
     if {![llength $insts]} {
         return {}
     }
@@ -530,6 +529,10 @@ proc _xform_compass {orient angle mirror} {
 # port's name+local-XY+TextJustification, transform each candidate's local
 # XY to the parent frame (same chain as instance_pins_in_parent_frame),
 # and pick the one closest to pinX,pinY.
+# Returns {compass fontsize} on success, "" on failure.
+# fontsize is the symbol-view port's FontSize property (NOT the textlabel's),
+# read as-is from `property get -name FontSize -system`. Use `-units iu` on
+# `property set` when writing it back.
 proc pin_orientation_in_parent_frame {lib cell view pin_name pinX pinY instX instY angle mirror scaling} {
 
     mode renderoff
@@ -543,7 +546,8 @@ proc pin_orientation_in_parent_frame {lib cell view pin_name pinX pinY instX ins
         set ddir   [property get -name TextJustification.Direction  -system]
         set dhjust [property get -name TextJustification.Horizontal -system]
         set dvjust [property get -name TextJustification.Vertical   -system]
-        lappend ports [list $n $lx $ly $ddir $dhjust $dvjust]
+        set fs     [property get -name FontSize                     -system]
+        lappend ports [list $n $lx $ly $ddir $dhjust $dvjust $fs]
         expr {1}
     }
     find port -scope view -filter $filterScript -goto none
@@ -559,10 +563,11 @@ proc pin_orientation_in_parent_frame {lib cell view pin_name pinX pinY instX ins
     set mflag [string is true -strict $mirror]
 
     set best_triplet ""
+    set best_fs ""
     set best_d2 ""
 
     foreach row $ports {
-        lassign $row n lx ly ddir dhjust dvjust
+        lassign $row n lx ly ddir dhjust dvjust fs
         if {$n ne $pin_name} { continue }
 
         # local -> parent transform (mirrors instance_pins_in_parent_frame;
@@ -593,6 +598,7 @@ proc pin_orientation_in_parent_frame {lib cell view pin_name pinX pinY instX ins
         if {$best_d2 eq "" || $d2 < $best_d2} {
             set best_d2 $d2
             set best_triplet [list $ddir $dhjust $dvjust]
+            set best_fs $fs
         }
     }
 
@@ -608,5 +614,6 @@ proc pin_orientation_in_parent_frame {lib cell view pin_name pinX pinY instX ins
         return ""
     }
 
-    return [_xform_compass $base $angle $mirror]
+    return [list [_xform_compass $base $angle $mirror] $best_fs]
 }
+
