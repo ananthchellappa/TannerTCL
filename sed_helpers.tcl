@@ -431,7 +431,11 @@ proc nearest_pin_to_cursor {} {
     }
     lassign $cursor cx cy
 
+	mode renderoff
     set insts [visible_instances]
+	find none
+	mode renderon
+	
     if {![llength $insts]} {
         return {}
     }
