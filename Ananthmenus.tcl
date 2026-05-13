@@ -294,6 +294,15 @@ workspace bindkeys -command {Highlight} -key "7"
 workspace menu -name {CUSTOM Wires {Set Hilite Colors} }  -command {highlight -default {blue gold red brown pink yellow magenta lemon purple}}
 workspace bindkeys -command {Set Hilite Colors} -key "Ctrl+9"
 
+workspace menu -name {CUSTOM Wires {Start Snapped Wire} }  -command {snap_start_wire_from_nearest_pin}
+workspace bindkeys -command {Start Snapped Wire} -key "Alt+S"
+
+workspace menu -name {CUSTOM Wires {Complete Snapped Wire} }  -command {snap_complete_wire_to_nearest_pin}
+workspace bindkeys -command {Complete Snapped Wire} -key "Alt+W"
+
+workspace menu -name {CUSTOM Wires {Stub to Nearest Pin} }  -command {snap_stub_at_nearest_pin}
+workspace bindkeys -command {Stub to Nearest Pin} -key "Alt+Space"
+
 workspace menu -name {CUSTOM Cell {Rename to symbol} }  -command {rename_current_view_to_symbol_review}
 
 workspace menu -name {CUSTOM Cell {Rename view} }  -command {rename_current_view_prompt_newname}
