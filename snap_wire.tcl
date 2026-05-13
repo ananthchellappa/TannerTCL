@@ -18,13 +18,14 @@ proc snap_start_wire_from_nearest_pin {} {
     }
     lassign $hit lib cell view inst pname pinX pinY instX instY angle mirror scaling
 
-    set orient [pin_orientation_in_parent_frame \
-                    $lib $cell $view $pname \
-                    $pinX $pinY $instX $instY $angle $mirror $scaling]
-    if {$orient eq ""} {
+    set oi [pin_orientation_in_parent_frame \
+                $lib $cell $view $pname \
+                $pinX $pinY $instX $instY $angle $mirror $scaling]
+    if {$oi eq ""} {
         puts "snap_start_wire_from_nearest_pin: unknown orientation for pin '$pname' on instance '$inst'"
         return
     }
+    lassign $oi orient _
 
     set cur [get_cursor_pos_in_iu]
     if {[llength $cur] != 2} {
@@ -100,13 +101,14 @@ proc snap_complete_wire_to_nearest_pin {} {
     }
     lassign $hit lib cell view inst pname pinX pinY instX instY angle mirror scaling
 
-    set orient [pin_orientation_in_parent_frame \
-                    $lib $cell $view $pname \
-                    $pinX $pinY $instX $instY $angle $mirror $scaling]
-    if {$orient eq ""} {
+    set oi [pin_orientation_in_parent_frame \
+                $lib $cell $view $pname \
+                $pinX $pinY $instX $instY $angle $mirror $scaling]
+    if {$oi eq ""} {
         puts "snap_complete_wire_to_nearest_pin: unknown orientation for pin '$pname' on instance '$inst'"
         return
     }
+    lassign $oi orient _
 
     set cur [get_cursor_pos_in_iu]
     if {[llength $cur] != 2} {
@@ -159,5 +161,118 @@ proc snap_complete_wire_to_nearest_pin {} {
     mode renderoff
     point click  $ex    $ey    -units iu
     point click2 $pinX  $pinY  -units iu
+    mode renderon
+}
+
+
+# Draw a one-direction wire stub from the pin nearest the cursor, projecting
+# the cursor onto the pin's facing axis (E/W -> stub-end at (cx, pinY);
+# N/S -> stub-end at (pinX, cy)). Place a netlabel named after the pin at
+# the stub-end, oriented to match the pin's facing direction, and override
+# the netlabel's FontSize with the symbol-view pin's FontSize (in iu).
+#
+# If the cursor is not on the side of the pin that the pin faces, warns and
+# exits without drawing.
+proc snap_stub_at_nearest_pin {} {
+
+    set hit [nearest_pin_to_cursor]
+    if {[llength $hit] != 12} {
+        puts "snap_stub_at_nearest_pin: no visible pin found"
+        return
+    }
+    lassign $hit lib cell view inst pname pinX pinY instX instY angle mirror scaling
+
+    set oi [pin_orientation_in_parent_frame \
+                $lib $cell $view $pname \
+                $pinX $pinY $instX $instY $angle $mirror $scaling]
+    if {$oi eq ""} {
+        puts "snap_stub_at_nearest_pin: unknown orientation/fontsize for pin '$pname' on instance '$inst'"
+        return
+    }
+    lassign $oi orient fontsize
+
+    set cur [get_cursor_pos_in_iu]
+    if {[llength $cur] != 2} {
+        puts "snap_stub_at_nearest_pin: cannot read cursor position"
+        return
+    }
+    lassign $cur cx cy
+
+    switch -- $orient {
+        east  {
+            if {$cx <= $pinX} {
+                puts "snap_stub_at_nearest_pin: pin '$pname' faces east; cursor must be east of pin (x_cursor > x_pin)"
+                return
+            }
+        }
+        west  {
+            if {$cx >= $pinX} {
+                puts "snap_stub_at_nearest_pin: pin '$pname' faces west; cursor must be west of pin (x_cursor < x_pin)"
+                return
+            }
+        }
+        north {
+            if {$cy <= $pinY} {
+                puts "snap_stub_at_nearest_pin: pin '$pname' faces north; cursor must be north of pin (y_cursor > y_pin)"
+                return
+            }
+        }
+        south {
+            if {$cy >= $pinY} {
+                puts "snap_stub_at_nearest_pin: pin '$pname' faces south; cursor must be south of pin (y_cursor < y_pin)"
+                return
+            }
+        }
+        default {
+            puts "snap_stub_at_nearest_pin: unrecognized orientation '$orient'"
+            return
+        }
+    }
+
+    # Stub-end: project cursor onto pin's facing axis (one direction only).
+    switch -- $orient {
+        east  -
+        west  { set ex $cx;    set ey $pinY }
+        north -
+        south { set ex $pinX;  set ey $cy   }
+    }
+
+    # Netlabel orientation (per stubs.tcl conventions).
+    switch -- $orient {
+        east  { set nl_dir normal; set nl_h left;  set nl_v bottom }
+        west  { set nl_dir normal; set nl_h right; set nl_v bottom }
+        north { set nl_dir down;   set nl_h left;  set nl_v bottom }
+        south { set nl_dir up;     set nl_h right; set nl_v top    }
+    }
+
+    mode renderoff
+    mode escape
+
+    # Draw the stub.
+    mode draw wire
+    point click  $pinX $pinY -units iu
+    point click2 $ex   $ey   -units iu
+
+    # Drop a netlabel at the stub-end.
+    port -type NetLabel
+    mode draw port
+    port -text $pname -hjustify $nl_h -vjustify $nl_v -direction $nl_dir -size 4pt -confirm false
+    point click $ex $ey -units iu
+    mode escape
+
+    # Override FontSize on the just-placed netlabel.
+    # Find by exact location (iu) and -modify in one shot; outer-var
+    # substitution via double-quoted filter/modify strings.
+    if {$fontsize ne ""} {
+        set filterScript "
+            set lx \[property get -name X -system\]
+            set ly \[property get -name Y -system\]
+            expr {\$lx == $ex && \$ly == $ey}
+        "
+        find netlabel -scope view -filter $filterScript -goto none \
+             -modify "property set -name FontSize -value $fontsize -system -units iu"
+        find none
+    }
+
     mode renderon
 }
