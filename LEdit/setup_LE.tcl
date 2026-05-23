@@ -28,6 +28,7 @@ workspace bindkeys -command {Hide Docked Views} -key Ctrl+F1
 
 puts "Run manually:\nworkspace bindkeys -command {Dismiss Markers} -key \"Shift+K\""
 workspace menu -name {ADDON {Dismiss Markers}}  -command {puts "Clearing markers";LCell_RemoveAllMarkers [workspace getactive -cell]}
+workspace menu -name {ADDON {SDL Extract Connectivity}}  -command {LSDL_ExtractConnectivity}
 
 proc bind_dismiss_markers_after_design_open {} {
     package require Tk
@@ -41,6 +42,7 @@ proc bind_dismiss_markers_after_design_open {} {
 
     if {$answer eq "ok"} {
         workspace bindkeys -command {Dismiss Markers} -key "Shift+K"
+        workspace bindkeys -command {SDL Extract Connectivity} -key "Shift+X"
     }
 }
 bind_dismiss_markers_after_design_open
