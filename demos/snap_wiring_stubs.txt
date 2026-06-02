@@ -1,0 +1,7 @@
+
+Admittedly, works better for smaller schematics - in this case, it was a large (many pins) instance - and the code is TCL that has to open up the cell (thank you Tanner :) and get pin info
+
+ALT-S : start a wire from nearest pin
+ALT-W : finish an ongoing wire to nearest pin
+
+ALT + SPACE : stub and label for nearest pin only - something you can do with Cadence but not in Tanner S-Edit with default shortcuts.
