@@ -1,6 +1,19 @@
-proc add_no_conn_at {x y {netlabel_name ""}} {
+# Pick the no-connect master: prefer noConn from the "basic" library when
+# that library is open and actually contains the cell; otherwise fall back
+# to the old Misc/NoConnection.
+# Returns {cell design}.
+proc _no_conn_master {} {
+    if { -1 != [lsearch -exact [database designs] basic] } {
+        if { -1 != [lsearch -exact [database cells -design basic] noConn] } {
+            return [list noConn basic]
+        }
+    }
+    return [list NoConnection Misc]
+}
+
+proc add_no_conn_at {x y {netlabel_name ""} {cell NoConnection} {design Misc}} {
     mode draw instance
-    instance -cell NoConnection -design Misc -view symbol
+    instance -cell $cell -design $design -view symbol
     point click -units iu -x $x -y $y
     mode escape
 
@@ -18,6 +31,9 @@ proc no_conn {} {
     set num_netlabels [get_num_selected_netlabels]
     set num_selected  [get_num_selected_objects]
 
+    # Resolve the master once, not per label
+    lassign [_no_conn_master] cell design
+
     mode renderoff
 
     # Case 1:
@@ -31,7 +47,7 @@ proc no_conn {} {
             set x    [lindex $xy 0]
             set y    [lindex $xy 1]
 
-            add_no_conn_at $x $y $name
+            add_no_conn_at $x $y $name $cell $design
         }
     } else {
         # Case 2:
@@ -40,7 +56,7 @@ proc no_conn {} {
         set x [lindex $cursor_pos 0]
         set y [lindex $cursor_pos 1]
 
-        add_no_conn_at $x $y
+        add_no_conn_at $x $y "" $cell $design
     }
 
     mode renderon
