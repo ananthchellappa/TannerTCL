@@ -4,11 +4,17 @@ proc tgl_port_lbl {} {
         return
     }
 
+    # Resolve the scratchpad library BEFORE touching the selection, so a
+    # cancel (or missing scratchpad) doesn't leave the schematic edited.
+    set dsn [scratch_design]
+    if {$dsn eq ""} {
+        return
+    }
+
     copy
     delete
     mode renderoff
 
-    set dsn [workspace getactive -toplevel_design]
     tgl_port_lbl_load_selection_into_scratchpad $dsn
 
     set plist [database ports]
