@@ -69,6 +69,8 @@ workspace bindkeys -command {Plot Currents} -key "Ctrl+2"
 workspace menu -name {CUSTOM {Useful Commands} {Open Scratch} }  -command {open_scratch}
 workspace bindkeys -command {Open Scratch} -key "Ctrl+Alt+Shift+S"
 
+workspace menu -name {CUSTOM {Useful Commands} {Choose Scratchpad Library} }  -command {scratch_choose}
+
 workspace menu -name {CUSTOM {Useful Commands} {Reset Grid} }  -command {res_grid}
 workspace bindkeys -command {Reset Grid} -key "Alt+R"
 
