@@ -160,6 +160,10 @@ workspace bindkeys -command {Increase snap grid} -key "Alt+Up Arrow"
 workspace menu -name {CUSTOM {Useful Commands} {Toggle Case} }  -command {toggle_case}
 workspace bindkeys -command {Toggle Case} -key "Ctrl+Alt+5"
 
+workspace menu -name {CUSTOM {Useful Commands} {Find Helper} }  -command {find_helper::show}
+workspace bindkeys -command {Find Helper} -key "Ctrl+F"
+# NOTE : Old (useless) Find Navigator was on CTRL-F. Get that anytime from View > Docking Views > Find and Replace
+
 # simulation aids..
 
 workspace menu -name {CUSTOM {Simulations} {Display Node V} }  -command {mode -propevalstyle voltage}
