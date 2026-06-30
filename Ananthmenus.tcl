@@ -228,6 +228,9 @@ workspace bindkeys -command {Chop Bus <M:N> -> <M>} -key "Ctrl+Shift+C"
 workspace menu -name {CUSTOM Bus {Fracture Bus} }  -command {frac_bus}
 workspace bindkeys -command {Fracture Bus} -key "Ctrl+Alt+F"
 
+workspace menu -name {CUSTOM Bus {Aggregate 8-bit} }  -command {aggregate_bus}
+workspace menu -name {CUSTOM Bus {Aggregate 16-bit} }  -command {aggregate_bus 16}
+
 # Ports
 
 workspace menu -name {CUSTOM Ports {Toggle Port NetLabel} }  -command {tgl_port_lbl}
