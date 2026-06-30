@@ -1,0 +1,115 @@
+# Unit tests for the PURE (Tanner-independent) bus logic in aggregate_bus.tcl.
+#
+# These exercise only the name parsing / concatenation / chunking / formatting
+# procs (ab_*), which contain no Tanner API calls and therefore run under a
+# stock tclsh:
+#
+#     tclsh tests/aggregate_bus.test
+#
+# The selection/placement layer (aggregate_bus, ab_collect_selected, ...) calls
+# the Tanner API and cannot be exercised here; it is verified by reading.
+
+package require tcltest
+namespace import ::tcltest::*
+
+set here [file dirname [file normalize [info script]]]
+source [file join $here .. aggregate_bus.tcl]
+
+# ---------------------------------------------------------------------------
+# ab_parse_name : one selected name -> ordered list of {base index} tokens
+# (scalar names carry an empty index)
+# ---------------------------------------------------------------------------
+
+test parse-descending {descending range expands MSB-first} {
+    ab_parse_name "reg1<2:0>"
+} {{reg1 2} {reg1 1} {reg1 0}}
+
+test parse-ascending {ascending range preserves LSB-first order} {
+    ab_parse_name "trim<0:2>"
+} {{trim 0} {trim 1} {trim 2}}
+
+test parse-single-index {single-bit indexed name} {
+    ab_parse_name "x<5>"
+} {{x 5}}
+
+test parse-scalar {scalar name has empty index} {
+    ab_parse_name "clk"
+} {{clk {}}}
+
+test parse-wide-range {large descending range} {
+    ab_parse_name "trim<7:0>"
+} {{trim 7} {trim 6} {trim 5} {trim 4} {trim 3} {trim 2} {trim 1} {trim 0}}
+
+# ---------------------------------------------------------------------------
+# ab_expand : list of names (already in physical order) -> flat token list
+# ---------------------------------------------------------------------------
+
+test expand-total-width {total width is sum of element widths} {
+    llength [ab_expand {reg1<2:0> reg2<2:0> trim<7:0>}]
+} {14}
+
+# ---------------------------------------------------------------------------
+# ab_chunk : flat token list -> list of <=width chunks, remainder last
+# ---------------------------------------------------------------------------
+
+test chunk-counts {14 tokens at width 8 -> chunks of 8 and 6} {
+    set c [ab_chunk [ab_expand {reg1<2:0> reg2<2:0> trim<7:0>}] 8]
+    list [llength $c] [llength [lindex $c 0]] [llength [lindex $c 1]]
+} {2 8 6}
+
+test chunk-width-exceeds-total {width larger than total -> single chunk} {
+    set c [ab_chunk [ab_expand {a<3:0>}] 8]
+    list [llength $c] [llength [lindex $c 0]]
+} {1 4}
+
+# ---------------------------------------------------------------------------
+# ab_format_chunk : token chunk -> comma-joined bus expression,
+# collapsing contiguous same-base runs back into ranges (direction preserved)
+# ---------------------------------------------------------------------------
+
+test format-mixed-run {collapses runs and slices the straddling name} {
+    ab_format_chunk {{reg1 2} {reg1 1} {reg1 0} {reg2 2} {reg2 1} {reg2 0} {trim 7} {trim 6}}
+} {reg1<2:0>,reg2<2:0>,trim<7:6>}
+
+test format-descending-remainder {remaining descending bits} {
+    ab_format_chunk {{trim 5} {trim 4} {trim 3} {trim 2} {trim 1} {trim 0}}
+} {trim<5:0>}
+
+test format-ascending {ascending run stays ascending} {
+    ab_format_chunk {{trim 0} {trim 1}}
+} {trim<0:1>}
+
+test format-single-bit-collapses {a one-element run renders as <n> not <n:n>} {
+    ab_format_chunk {{x 7}}
+} {x<7>}
+
+test format-scalar {scalar renders with no bracket} {
+    ab_format_chunk {{clk {}}}
+} {clk}
+
+test format-scalar-amid-bus {scalar breaks a run} {
+    ab_format_chunk {{a 1} {a 0} {clk {}} {b 1} {b 0}}
+} {a<1:0>,clk,b<1:0>}
+
+# ---------------------------------------------------------------------------
+# ab_compute : end-to-end (names, width) -> list of netlabel strings
+# This is the headline example from the spec.
+# ---------------------------------------------------------------------------
+
+test compute-spec-example {the canonical spec example} {
+    ab_compute {reg1<2:0> reg2<2:0> trim<7:0>} 8
+} {reg1<2:0>,reg2<2:0>,trim<7:6> trim<5:0>}
+
+test compute-ascending-example {ascending inputs preserved through the split} {
+    ab_compute {reg1<0:2> reg2<0:2> trim<0:7>} 8
+} {reg1<0:2>,reg2<0:2>,trim<0:1> trim<2:7>}
+
+test compute-exact-multiple {16 bits at width 8 -> two full buses} {
+    ab_compute {a<7:0> b<7:0>} 8
+} {a<7:0> b<7:0>}
+
+test compute-default-fits {everything fits in one bus} {
+    ab_compute {a<2:0> b<2:0>} 8
+} {a<2:0>,b<2:0>}
+
+cleanupTests
