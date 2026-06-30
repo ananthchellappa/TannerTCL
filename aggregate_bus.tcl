@@ -24,6 +24,10 @@
 #     originals, and handed to the user in place mode to click down.
 #   * Geometry (TextJustification + FontSize) is inherited from the physically
 #     topmost selected item.
+#   * add_dummies (default 1) pads the LSB end with uu_reg<N:0> dummy bits so
+#     the total rounds up to a full multiple of <width>; when it does, an extra
+#     standalone uu_reg<N:0> netlabel is also emitted (same net name) so the
+#     user can tie no-connects to it and suppress unused-pin warnings.
 #
 # This file is split into a PURE layer (ab_parse_name / ab_expand / ab_chunk /
 # ab_format_chunk / ab_compute) with no Tanner dependencies -- unit-tested in
@@ -162,6 +166,16 @@ proc ab_pad_count {total width} {
 # Base name used for dummy (unused-register) padding bits.
 set ab_dummy_base "uu_reg"
 
+# Descending dummy tokens uu_reg<count-1>..<0> (empty list when count is 0).
+proc ab_dummy_tokens {count} {
+    global ab_dummy_base
+    set toks {}
+    for {set k [expr {$count - 1}]} {$k >= 0} {incr k -1} {
+        lappend toks [list $ab_dummy_base $k]
+    }
+    return $toks
+}
+
 # End-to-end pure transform: names (physical order) + width -> list of netlabel
 # strings, MSB chunk first.
 #
@@ -170,22 +184,28 @@ set ab_dummy_base "uu_reg"
 # <width>. This lets the resulting bus connect to a width-wide bussed port
 # without a width-incompatibility error. add_dummies 0 leaves a short
 # remainder chunk as-is.
+#
+# Whenever dummies are actually added, ONE extra standalone netlabel holding
+# just the dummy bits (e.g. uu_reg<1:0>) is appended as the final entry. It
+# carries the same net name as the padded bits in the bus, so the user can
+# place it and tie no-connects to it to suppress unused-pin warnings.
 proc ab_compute {names width {add_dummies 1}} {
-    global ab_dummy_base
-
     set tokens [ab_expand $names]
 
+    set dummies {}
     if {$add_dummies} {
-        set pad [ab_pad_count [llength $tokens] $width]
-        # Descending uu_reg<pad-1>..<0>, appended at the LSB end.
-        for {set k [expr {$pad - 1}]} {$k >= 0} {incr k -1} {
-            lappend tokens [list $ab_dummy_base $k]
+        set dummies [ab_dummy_tokens [ab_pad_count [llength $tokens] $width]]
+        foreach t $dummies {
+            lappend tokens $t
         }
     }
 
     set out {}
     foreach c [ab_chunk $tokens $width] {
         lappend out [ab_format_chunk $c]
+    }
+    if {[llength $dummies] > 0} {
+        lappend out [ab_format_chunk $dummies]
     }
     return $out
 }
