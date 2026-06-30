@@ -40,6 +40,18 @@ test parse-wide-range {large descending range} {
     ab_parse_name "trim<7:0>"
 } {{trim 7} {trim 6} {trim 5} {trim 4} {trim 3} {trim 2} {trim 1} {trim 0}}
 
+test parse-comma-concat {a name already concatenated with commas expands to all its bits} {
+    ab_parse_name "a<1:0>,b<1:0>"
+} {{a 1} {a 0} {b 1} {b 0}}
+
+test parse-comma-mixed {comma concat mixing a range, a scalar, and a single bit} {
+    ab_parse_name "a<1:0>,clk,b<3>"
+} {{a 1} {a 0} {clk {}} {b 3}}
+
+test parse-comma-stray {empty segments from stray commas/whitespace are ignored} {
+    ab_parse_name "a<1:0>, ,b<0>"
+} {{a 1} {a 0} {b 0}}
+
 # ---------------------------------------------------------------------------
 # ab_expand : list of names (already in physical order) -> flat token list
 # ---------------------------------------------------------------------------
@@ -47,6 +59,10 @@ test parse-wide-range {large descending range} {
 test expand-total-width {total width is sum of element widths} {
     llength [ab_expand {reg1<2:0> reg2<2:0> trim<7:0>}]
 } {14}
+
+test expand-comma-width {a comma-concatenated selection counts all its bits} {
+    llength [ab_expand {a<1:0>,b<1:0> c<1:0>}]
+} {6}
 
 # ---------------------------------------------------------------------------
 # ab_chunk : flat token list -> list of <=width chunks, remainder last
@@ -111,5 +127,13 @@ test compute-exact-multiple {16 bits at width 8 -> two full buses} {
 test compute-default-fits {everything fits in one bus} {
     ab_compute {a<2:0> b<2:0>} 8
 } {a<2:0>,b<2:0>}
+
+test compute-comma-input-merges {pre-concatenated selection flows into one bus when it fits} {
+    ab_compute {a<1:0>,b<1:0> c<1:0>} 8
+} {a<1:0>,b<1:0>,c<1:0>}
+
+test compute-comma-input-resplit {pre-concatenated selection is re-split at the new width} {
+    ab_compute {a<1:0>,b<1:0> c<1:0>} 4
+} {a<1:0>,b<1:0> c<1:0>}
 
 cleanupTests
