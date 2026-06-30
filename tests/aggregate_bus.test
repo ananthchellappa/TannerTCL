@@ -168,24 +168,29 @@ test compute-comma-input-resplit {pre-concatenated selection is re-split at the 
 # ab_compute with dummy padding (add_dummies defaults to 1)
 # ---------------------------------------------------------------------------
 
-test compute-pad-default {default pads the LSBs up to one full width} {
+test compute-pad-default {default pads the LSBs and emits a standalone dummy connector} {
     ab_compute {a<1:0> b<1:0> c<1:0>} 8
-} {a<1:0>,b<1:0>,c<1:0>,uu_reg<1:0>}
+} {a<1:0>,b<1:0>,c<1:0>,uu_reg<1:0> uu_reg<1:0>}
 
-test compute-pad-single-bit {a one-bit pad renders as uu_reg<0>} {
+test compute-pad-single-bit {a one-bit pad renders as uu_reg<0> in bus and connector} {
     ab_compute {a<2:0>} 4
-} {a<2:0>,uu_reg<0>}
+} {a<2:0>,uu_reg<0> uu_reg<0>}
 
-test compute-pad-spills-last-chunk {padding lands in the final chunk only} {
+test compute-pad-spills-last-chunk {padding lands in the final chunk, plus a connector} {
     ab_compute {reg1<2:0> reg2<2:0> trim<7:0>} 8
-} {reg1<2:0>,reg2<2:0>,trim<7:6> trim<5:0>,uu_reg<1:0>}
+} {reg1<2:0>,reg2<2:0>,trim<7:6> trim<5:0>,uu_reg<1:0> uu_reg<1:0>}
 
-test compute-pad-exact-multiple-noop {no dummies when total is already a multiple} {
+test compute-pad-exact-multiple-noop {no dummies and no connector when already a multiple} {
     ab_compute {a<7:0> b<7:0>} 8
 } {a<7:0> b<7:0>}
 
-test compute-pad-disabled {add_dummies 0 suppresses padding} {
+test compute-pad-disabled {add_dummies 0 suppresses padding and the connector} {
     ab_compute {a<1:0> b<1:0> c<1:0>} 8 0
 } {a<1:0>,b<1:0>,c<1:0>}
+
+test compute-pad-connector-is-last {the standalone connector is the final netlabel and matches the padded bits} {
+    set r [ab_compute {a<1:0> b<1:0> c<1:0>} 8]
+    lindex $r end
+} {uu_reg<1:0>}
 
 cleanupTests
