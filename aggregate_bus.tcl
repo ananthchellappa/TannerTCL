@@ -39,9 +39,25 @@
 #   "trim<0:2>" -> {{trim 0} {trim 1} {trim 2}}   (ascending preserved)
 #   "x<5>"      -> {{x 5}}
 #   "clk"       -> {{clk {}}}                      (scalar: empty index)
-# The literal order of the indices is preserved so the bit direction survives
-# the round-trip through chunking and reformatting.
+# A selected name may itself already be a comma-concatenated bus, e.g.
+#   "a<1:0>,b<1:0>" -> {{a 1} {a 0} {b 1} {b 0}}   (4 bits)
+# Each comma segment is parsed independently and the bits are concatenated in
+# order; empty segments (stray commas / whitespace) are ignored. The literal
+# index order is preserved so bit direction survives chunking + reformatting.
 proc ab_parse_name {name} {
+    set toks {}
+    foreach piece [split $name ","] {
+        set piece [string trim $piece]
+        if {$piece eq ""} continue
+        foreach t [ab_parse_atom $piece] {
+            lappend toks $t
+        }
+    }
+    return $toks
+}
+
+# Parse a single bus atom (no commas) into {base index} tokens.
+proc ab_parse_atom {name} {
     if {[regexp {^(.+)<([0-9]+):([0-9]+)>$} $name -> base a b]} {
         set step [expr {$b >= $a ? 1 : -1}]
         set toks {}
