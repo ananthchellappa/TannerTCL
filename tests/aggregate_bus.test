@@ -79,6 +79,34 @@ test chunk-width-exceeds-total {width larger than total -> single chunk} {
 } {1 4}
 
 # ---------------------------------------------------------------------------
+# ab_pad_count : dummy bits needed to round total up to a multiple of width
+# ---------------------------------------------------------------------------
+
+test pad-count-short {6 bits at width 8 needs 2 dummy bits} {
+    ab_pad_count 6 8
+} {2}
+
+test pad-count-exact {an exact multiple needs no padding} {
+    ab_pad_count 8 8
+} {0}
+
+test pad-count-over-multiple {14 bits at width 8 rounds up to 16} {
+    ab_pad_count 14 8
+} {2}
+
+test pad-count-small-bus {3 bits at width 8 needs 5 dummy bits} {
+    ab_pad_count 3 8
+} {5}
+
+test pad-count-narrow-width {6 bits at width 4 needs 2 dummy bits} {
+    ab_pad_count 6 4
+} {2}
+
+test pad-count-empty {zero bits needs no padding} {
+    ab_pad_count 0 8
+} {0}
+
+# ---------------------------------------------------------------------------
 # ab_format_chunk : token chunk -> comma-joined bus expression,
 # collapsing contiguous same-base runs back into ranges (direction preserved)
 # ---------------------------------------------------------------------------
@@ -112,12 +140,12 @@ test format-scalar-amid-bus {scalar breaks a run} {
 # This is the headline example from the spec.
 # ---------------------------------------------------------------------------
 
-test compute-spec-example {the canonical spec example} {
-    ab_compute {reg1<2:0> reg2<2:0> trim<7:0>} 8
+test compute-spec-example {the canonical spec example (no padding)} {
+    ab_compute {reg1<2:0> reg2<2:0> trim<7:0>} 8 0
 } {reg1<2:0>,reg2<2:0>,trim<7:6> trim<5:0>}
 
 test compute-ascending-example {ascending inputs preserved through the split} {
-    ab_compute {reg1<0:2> reg2<0:2> trim<0:7>} 8
+    ab_compute {reg1<0:2> reg2<0:2> trim<0:7>} 8 0
 } {reg1<0:2>,reg2<0:2>,trim<0:1> trim<2:7>}
 
 test compute-exact-multiple {16 bits at width 8 -> two full buses} {
@@ -125,15 +153,39 @@ test compute-exact-multiple {16 bits at width 8 -> two full buses} {
 } {a<7:0> b<7:0>}
 
 test compute-default-fits {everything fits in one bus} {
-    ab_compute {a<2:0> b<2:0>} 8
+    ab_compute {a<2:0> b<2:0>} 8 0
 } {a<2:0>,b<2:0>}
 
 test compute-comma-input-merges {pre-concatenated selection flows into one bus when it fits} {
-    ab_compute {a<1:0>,b<1:0> c<1:0>} 8
+    ab_compute {a<1:0>,b<1:0> c<1:0>} 8 0
 } {a<1:0>,b<1:0>,c<1:0>}
 
 test compute-comma-input-resplit {pre-concatenated selection is re-split at the new width} {
-    ab_compute {a<1:0>,b<1:0> c<1:0>} 4
+    ab_compute {a<1:0>,b<1:0> c<1:0>} 4 0
 } {a<1:0>,b<1:0> c<1:0>}
+
+# ---------------------------------------------------------------------------
+# ab_compute with dummy padding (add_dummies defaults to 1)
+# ---------------------------------------------------------------------------
+
+test compute-pad-default {default pads the LSBs up to one full width} {
+    ab_compute {a<1:0> b<1:0> c<1:0>} 8
+} {a<1:0>,b<1:0>,c<1:0>,uu_reg<1:0>}
+
+test compute-pad-single-bit {a one-bit pad renders as uu_reg<0>} {
+    ab_compute {a<2:0>} 4
+} {a<2:0>,uu_reg<0>}
+
+test compute-pad-spills-last-chunk {padding lands in the final chunk only} {
+    ab_compute {reg1<2:0> reg2<2:0> trim<7:0>} 8
+} {reg1<2:0>,reg2<2:0>,trim<7:6> trim<5:0>,uu_reg<1:0>}
+
+test compute-pad-exact-multiple-noop {no dummies when total is already a multiple} {
+    ab_compute {a<7:0> b<7:0>} 8
+} {a<7:0> b<7:0>}
+
+test compute-pad-disabled {add_dummies 0 suppresses padding} {
+    ab_compute {a<1:0> b<1:0> c<1:0>} 8 0
+} {a<1:0>,b<1:0>,c<1:0>}
 
 cleanupTests
