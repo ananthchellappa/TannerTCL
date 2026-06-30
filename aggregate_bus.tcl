@@ -149,12 +149,42 @@ proc ab_format_chunk {tokens} {
     return [join $out ","]
 }
 
+# Number of dummy bits needed to round <total> up to a whole multiple of
+# <width>, so every emitted netlabel is exactly <width> bits wide. 0 when
+# total is already a multiple (or zero).
+proc ab_pad_count {total width} {
+    if {$width < 1} {
+        error "ab_pad_count: width must be >= 1 (got $width)"
+    }
+    return [expr {($width - ($total % $width)) % $width}]
+}
+
+# Base name used for dummy (unused-register) padding bits.
+set ab_dummy_base "uu_reg"
+
 # End-to-end pure transform: names (physical order) + width -> list of netlabel
 # strings, MSB chunk first.
-proc ab_compute {names width} {
-    set chunks [ab_chunk [ab_expand $names] $width]
+#
+# When add_dummies is true (the default), dummy bits named uu_reg<N:0> are
+# appended as the LSBs so the total width rounds up to a full multiple of
+# <width>. This lets the resulting bus connect to a width-wide bussed port
+# without a width-incompatibility error. add_dummies 0 leaves a short
+# remainder chunk as-is.
+proc ab_compute {names width {add_dummies 1}} {
+    global ab_dummy_base
+
+    set tokens [ab_expand $names]
+
+    if {$add_dummies} {
+        set pad [ab_pad_count [llength $tokens] $width]
+        # Descending uu_reg<pad-1>..<0>, appended at the LSB end.
+        for {set k [expr {$pad - 1}]} {$k >= 0} {incr k -1} {
+            lappend tokens [list $ab_dummy_base $k]
+        }
+    }
+
     set out {}
-    foreach c $chunks {
+    foreach c [ab_chunk $tokens $width] {
         lappend out [ab_format_chunk $c]
     }
     return $out
@@ -224,7 +254,7 @@ proc ab_open_scratch {dsn} {
     delete
 }
 
-proc aggregate_bus {{width 8}} {
+proc aggregate_bus {{width 8} {add_dummies 1}} {
     set items [ab_collect_selected]
     if {[llength $items] == 0} {
         puts "aggregate_bus: select one or more ports/netlabels first."
@@ -236,7 +266,7 @@ proc aggregate_bus {{width 8}} {
         lappend names [lindex $it 2]
     }
 
-    set labels [ab_compute $names $width]
+    set labels [ab_compute $names $width $add_dummies]
     if {[llength $labels] == 0} {
         puts "aggregate_bus: nothing to aggregate."
         return
