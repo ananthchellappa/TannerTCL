@@ -280,6 +280,8 @@ workspace bindkeys -command {Add Suffix} -key "Ctrl+Alt+Shift+F"
 workspace menu -name {CUSTOM Ports {Remove Suffix} }  -command {remove_suffix}
 workspace bindkeys -command {Remove Suffix} -key "Ctrl+Alt+Shift+E"
 
+workspace menu -name {CUSTOM Ports {Draw Pin Lines} }  -command {draw_pin_lines}
+
 # Wires
 
 workspace menu -name {CUSTOM Wires {Stubs Hor+Ver Labels} }  -command {make_stubs}
