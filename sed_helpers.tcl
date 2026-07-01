@@ -533,6 +533,29 @@ proc _xform_compass {orient angle mirror} {
 # fontsize is the symbol-view port's FontSize property (NOT the textlabel's),
 # read as-is from `property get -name FontSize -system`. Use `-units iu` on
 # `property set` when writing it back.
+# Decide which edge of the symbol a pin sits on purely from its LOCAL position
+# relative to the port bounding box, and return the outward compass direction
+# (east/west/north/south) in the symbol's own frame.
+#
+# This is deliberately independent of the port's TextJustification: some symbols
+# have degenerate pins (e.g. a pin on the top edge but justified horizontally),
+# where the text orientation would imply a facing that juts back into the body.
+# Position is the reliable signal -- a top-edge pin faces north regardless of how
+# its name text is oriented. The dominant axis (larger offset from the bbox
+# center) wins; ties fall to horizontal. Local +y is up (north).
+# Returns "" only for a degenerate bbox (all ports coincident).
+proc _edge_compass_from_pos {lx ly xmin xmax ymin ymax} {
+    set cx [expr {($xmin + $xmax) / 2.0}]
+    set cy [expr {($ymin + $ymax) / 2.0}]
+    set dx [expr {$lx - $cx}]
+    set dy [expr {$ly - $cy}]
+    if {$dx == 0 && $dy == 0} { return "" }
+    if {abs($dx) >= abs($dy)} {
+        return [expr {$dx >= 0 ? "east" : "west"}]
+    }
+    return [expr {$dy >= 0 ? "north" : "south"}]
+}
+
 proc pin_orientation_in_parent_frame {lib cell view pin_name pinX pinY instX instY angle mirror scaling} {
 
     mode renderoff
@@ -562,7 +585,19 @@ proc pin_orientation_in_parent_frame {lib cell view pin_name pinX pinY instX ins
 
     set mflag [string is true -strict $mirror]
 
-    set best_triplet ""
+    # Port bounding box in the symbol's local frame -- defines which edge each
+    # pin sits on. Computed over ALL ports (every pin defines the extent).
+    set xmin ""; set xmax ""; set ymin ""; set ymax ""
+    foreach row $ports {
+        lassign $row n lx ly
+        if {$xmin eq "" || $lx < $xmin} { set xmin $lx }
+        if {$xmax eq "" || $lx > $xmax} { set xmax $lx }
+        if {$ymin eq "" || $ly < $ymin} { set ymin $ly }
+        if {$ymax eq "" || $ly > $ymax} { set ymax $ly }
+    }
+
+    set best_lx ""
+    set best_ly ""
     set best_fs ""
     set best_d2 ""
 
@@ -571,7 +606,8 @@ proc pin_orientation_in_parent_frame {lib cell view pin_name pinX pinY instX ins
         if {$n ne $pin_name} { continue }
 
         # local -> parent transform (mirrors instance_pins_in_parent_frame;
-        # keep the two in sync if either is corrected).
+        # keep the two in sync if either is corrected). Only used here to pick
+        # the right port among duplicate names by nearness to pinX,pinY.
         set sx [expr {$lx * $scaling}]
         set sy [expr {$ly * $scaling}]
         switch -- $angle {
@@ -597,20 +633,23 @@ proc pin_orientation_in_parent_frame {lib cell view pin_name pinX pinY instX ins
 
         if {$best_d2 eq "" || $d2 < $best_d2} {
             set best_d2 $d2
-            set best_triplet [list $ddir $dhjust $dvjust]
+            set best_lx $lx
+            set best_ly $ly
             set best_fs $fs
         }
     }
 
-    if {$best_triplet eq ""} {
+    if {$best_lx eq ""} {
         puts "pin_orientation_in_parent_frame: no port named '$pin_name' in $lib/$cell/$view"
         return ""
     }
 
-    lassign $best_triplet ddir dhjust dvjust
-    set base [_port_base_compass $ddir $dhjust $dvjust]
+    # Facing is decided by the pin's position on the symbol, NOT its text
+    # justification -- robust to degenerate pins (e.g. a top-edge pin justified
+    # horizontally). _xform_compass then applies the instance angle/mirror.
+    set base [_edge_compass_from_pos $best_lx $best_ly $xmin $xmax $ymin $ymax]
     if {$base eq ""} {
-        puts "pin_orientation_in_parent_frame: unsupported TextJustification for '$pin_name': $ddir|$dhjust|$dvjust"
+        puts "pin_orientation_in_parent_frame: cannot infer edge for '$pin_name' (degenerate port bbox in $lib/$cell/$view)"
         return ""
     }
 
