@@ -41,42 +41,23 @@ proc apl_get_selected_port_props {} {
 }
 
 
+# Place the textlabel on the side OPPOSITE the port's own name text, offset by
+# $offset. Which side the name sits on comes from _pin_name_side (sed_helpers),
+# so this handles every justification pin_lines does -- including Up-direction
+# pins and degenerate pins (e.g. a top-edge pin justified horizontally) that the
+# old four-hard-coded-cases version silently skipped.
+#
+# name east  -> label west  (right/middle/normal)
+# name west  -> label east  (left/middle/normal)
+# name south -> label north (center/bottom/down)
+# name north -> label south (center/top/down)
 proc apl_compute_label_placement {X Y dir hjust vjust offset} {
 
-    set dir_l   [string tolower $dir]
-    set hjust_l [string tolower $hjust]
-    set vjust_l [string tolower $vjust]
-
-    # Case 1
-    if {$dir_l eq "normal" && $hjust_l eq "left" && $vjust_l eq "middle"} {
-        set lx [expr {$X - $offset}]
-        set ly $Y
-        return [list $lx $ly right middle normal]
-    }
-
-    # Case 2
-    if {$dir_l eq "normal" && $hjust_l eq "right" && $vjust_l eq "middle"} {
-        set lx [expr {$X + $offset}]
-        set ly $Y
-        return [list $lx $ly left middle normal]
-    }
-
-    # Case 3
-    # Port on bottom edge, label physically above port
-    # Corrected created-label vjustify is BOTTOM
-    if {$dir_l eq "down" && $hjust_l eq "center" && $vjust_l eq "top"} {
-        set lx $X
-        set ly [expr {$Y + $offset}]
-        return [list $lx $ly center bottom down]
-    }
-
-    # Case 4
-    # Port on top edge, label physically below port
-    # Corrected created-label vjustify is TOP
-    if {$dir_l eq "down" && $hjust_l eq "center" && $vjust_l eq "bottom"} {
-        set lx $X
-        set ly [expr {$Y - $offset}]
-        return [list $lx $ly center top down]
+    switch -- [_pin_name_side $dir $hjust $vjust] {
+        east  { return [list [expr {$X - $offset}] $Y right  middle normal] }
+        west  { return [list [expr {$X + $offset}] $Y left   middle normal] }
+        south { return [list $X [expr {$Y + $offset}] center bottom down]   }
+        north { return [list $X [expr {$Y - $offset}] center top    down]   }
     }
 
     return ""

@@ -19,22 +19,8 @@
 #
 # To flip the convention (draw on the SAME side as the name instead), swap the
 # sign of the four ex/ey expressions below.
-
-# Return the compass side the pin's NAME text occupies, or "" if unrecognized.
-proc _pin_name_side {dir hjust vjust} {
-    if {$dir eq "Normal"} {
-        switch -- $hjust {
-            Left  { return east }
-            Right { return west }
-        }
-    } elseif {$dir eq "Up" || $dir eq "Down"} {
-        switch -- $vjust {
-            Top    { return south }
-            Bottom { return north }
-        }
-    }
-    return ""
-}
+#
+# depends on sed_helpers.tcl (_pin_name_side)
 
 proc draw_pin_lines { {len 100} } {
 

@@ -483,6 +483,31 @@ proc _port_base_compass {dir hjust vjust} {
     }
 }
 
+# Return the compass side the port's NAME text occupies (east/west/north/south),
+# or "" if the justification is unrecognized. Unlike _port_base_compass this
+# keys off only the relevant axis and handles both Up and Down text directions:
+#   Direction Normal  -> Horizontal decides:  Left -> east,  Right -> west
+#   Direction Up/Down -> Vertical   decides:  Top  -> south (name below),
+#                                             Bottom -> north (name above)
+# The off-axis justification (and Up-vs-Down) is intentionally ignored, so
+# degenerate pins (e.g. a top-edge pin justified horizontally) still resolve.
+# Used by callers that place something on the side OPPOSITE the name
+# (draw_pin_lines, add_port_labels).
+proc _pin_name_side {dir hjust vjust} {
+    if {$dir eq "Normal"} {
+        switch -- $hjust {
+            Left  { return east }
+            Right { return west }
+        }
+    } elseif {$dir eq "Up" || $dir eq "Down"} {
+        switch -- $vjust {
+            Top    { return south }
+            Bottom { return north }
+        }
+    }
+    return ""
+}
+
 # Apply an instance's angle (CW degrees) and mirror (Y-axis, after rotate)
 # to a base compass direction. Returns east/west/north/south, or "" if the
 # input is invalid.
