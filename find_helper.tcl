@@ -248,10 +248,11 @@ proc find_helper::report_results {findret} {
 # comma-separated list. It never renames, never touches the selection flags,
 # and does not need -modify.
 #
-# Names are collected with a -filter body that lappends each Name to the
+# Each match's {Name X Y} is collected with a -filter body that lappends to the
 # namespace-scoped ::find_helper::listnames and returns true (expr 1) so every
-# name-matched object is kept. The body is a STATIC braced script referencing
-# only the fully-qualified var, so nothing from the user is interpolated in.
+# name-matched object is kept; the X/Y let list_names order the names the way
+# they read on screen. The body is a STATIC braced script referencing only the
+# fully-qualified var, so nothing from the user is interpolated in.
 proc find_helper::build_list_args {} {
     variable ftype
     variable fname
@@ -271,9 +272,41 @@ proc find_helper::build_list_args {} {
     if {$contains} { lappend a -contains }
     lappend a -scope $fscope
     lappend a -goto none
-    lappend a -filter {lappend ::find_helper::listnames [lindex [property get -name Name -system] 0]
+    lappend a -filter {lappend ::find_helper::listnames [list [lindex [property get -name Name -system] 0] [lindex [property get -name X -system] 0] [lindex [property get -name Y -system] 0]]
 expr 1}
     return $a
+}
+
+# Order collected {Name X Y} entries the way they read on screen: left-to-right
+# when the objects span wider in X than Y, otherwise top-to-bottom. Top-to-bottom
+# is DESCENDING Y because larger Y is higher up on the schematic. Assumes the
+# objects are spread out more along one axis than the other (ties -> horizontal).
+# Returns just the names, in order.
+proc find_helper::order_by_screen {entries} {
+    set out {}
+    if {[llength $entries] <= 1} {
+        foreach e $entries { lappend out [lindex $e 0] }
+        return $out
+    }
+
+    set xs {}
+    set ys {}
+    foreach e $entries {
+        lappend xs [lindex $e 1]
+        lappend ys [lindex $e 2]
+    }
+    set xs [lsort -real $xs]
+    set ys [lsort -real $ys]
+    set xspread [expr {[lindex $xs end] - [lindex $xs 0]}]
+    set yspread [expr {[lindex $ys end] - [lindex $ys 0]}]
+
+    if {$xspread >= $yspread} {
+        set sorted [lsort -real -index 1 $entries]             ;# left -> right
+    } else {
+        set sorted [lsort -real -decreasing -index 2 $entries] ;# top -> bottom
+    }
+    foreach e $sorted { lappend out [lindex $e 0] }
+    return $out
 }
 
 proc find_helper::list_names {} {
@@ -294,8 +327,9 @@ proc find_helper::list_names {} {
         return
     }
 
-    set n [llength $listnames]
-    set namelist [join $listnames ","]
+    set names [find_helper::order_by_screen $listnames]
+    set n [llength $names]
+    set namelist [join $names ","]
     if {$n == 0} {
         find_helper::set_results "(nothing matched)"
     } else {
@@ -303,6 +337,43 @@ proc find_helper::list_names {} {
     }
     find_helper::set_status "$n listed"
     puts "find_helper list ($n): $namelist"
+}
+
+#-----------------------------------------------------------------------------
+# Copy pane text to the OS clipboard
+#-----------------------------------------------------------------------------
+
+# S-Edit's embedded interpreter shadows Tk's `clipboard` command with its own
+# (design) clipboard, so the stock tk_textCopy binding errors out with
+# "Extraneous argument: clear" and pops an Application Error. We avoid the
+# `clipboard` (and `selection`) commands entirely: read the highlighted text
+# straight off the widget's own `sel` tag -- or the whole pane if nothing is
+# highlighted -- and hand it to the Windows clipboard via clip.exe. If the pipe
+# is unavailable (exec disabled), fall back to dumping to the Tcl console so the
+# user can still grab the text, and never let it raise.
+proc find_helper::copy_results {{t .findHelper.res.t}} {
+    if {![winfo exists $t]} return
+
+    if {[llength [$t tag ranges sel]]} {
+        set txt [$t get sel.first sel.last]
+    } else {
+        set txt [$t get 1.0 end-1c]
+    }
+    if {$txt eq ""} {
+        find_helper::set_status "nothing to copy"
+        return
+    }
+
+    if {[catch {
+        set fh [open "|clip" w]
+        puts -nonewline $fh $txt
+        close $fh
+    } err]} {
+        find_helper::set_status "clipboard unavailable; dumped to console"
+        puts "find_helper copy failed ($err); text follows:\n$txt"
+        return
+    }
+    find_helper::set_status "copied [string length $txt] chars to clipboard"
 }
 
 #-----------------------------------------------------------------------------
@@ -451,9 +522,10 @@ proc find_helper::show {} {
     pack $bb -side top -fill x -padx 10 -pady 6
     button $bb.build -text "Build Command" -font FhButton -command find_helper::build_only
     button $bb.run   -text "Run"           -font FhButton -command find_helper::run
+    button $bb.copy  -text "Copy Results"  -font FhButton -command find_helper::copy_results
     button $bb.reset -text "Reset"         -font FhButton -command find_helper::reset
     button $bb.close -text "Close"         -font FhButton -command [list destroy $w]
-    pack $bb.build $bb.run $bb.reset -side left -padx 4
+    pack $bb.build $bb.run $bb.copy $bb.reset -side left -padx 4
     pack $bb.close -side right -padx 4
 
     # --- command box ---
@@ -474,6 +546,15 @@ proc find_helper::show {} {
     pack $w.res.sb -side right -fill y
     pack $w.res.t -side left -fill both -expand 1
     $w.res.t configure -state disabled
+
+    # Intercept copy on the read-only panes: the stock tk_textCopy binding calls
+    # the (shadowed) Tk `clipboard` command and crashes. `break` stops the class
+    # binding from running after ours. Bind both the results and command boxes.
+    foreach _t [list $w.res.t $w.cmd] {
+        bind $_t <<Copy>>         {find_helper::copy_results %W; break}
+        bind $_t <Control-c>      {find_helper::copy_results %W; break}
+        bind $_t <Control-Insert> {find_helper::copy_results %W; break}
+    }
 
     # --- status ---
     label $w.status -textvariable ::find_helper::status -font FhSmall -anchor w
