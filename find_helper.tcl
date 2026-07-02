@@ -41,11 +41,12 @@ namespace eval find_helper {
     variable report   0
     variable status   ""
 
-    # run-time scratch (referenced by the generated -modify body)
+    # run-time scratch (referenced by the generated -modify / -filter body)
     variable subFrom  ""
     variable subTo    ""
     variable hits     {}
     variable fails    {}
+    variable listnames {}
 
     variable inited   0
 }
@@ -238,6 +239,73 @@ proc find_helper::report_results {findret} {
 }
 
 #-----------------------------------------------------------------------------
+# List (dump matching names as a comma-separated list)
+#-----------------------------------------------------------------------------
+
+# List is independent of Run: it applies ONLY the match criteria (object type,
+# name, and the Match-mode options -wildcard/-regex/-nocase/-exact/-contains)
+# plus the scope, and dumps the matching Name properties as a plain
+# comma-separated list. It never renames, never touches the selection flags,
+# and does not need -modify.
+#
+# Names are collected with a -filter body that lappends each Name to the
+# namespace-scoped ::find_helper::listnames and returns true (expr 1) so every
+# name-matched object is kept. The body is a STATIC braced script referencing
+# only the fully-qualified var, so nothing from the user is interpolated in.
+proc find_helper::build_list_args {} {
+    variable ftype
+    variable fname
+    variable fscope
+    variable wildcard
+    variable regex
+    variable nocase
+    variable exact
+    variable contains
+
+    set a [list $ftype]
+    if {[string trim $fname] ne ""} { lappend a -name $fname }
+    if {$wildcard} { lappend a -wildcard }
+    if {$regex}    { lappend a -regex }
+    if {$nocase}   { lappend a -nocase }
+    if {$exact}    { lappend a -exact }
+    if {$contains} { lappend a -contains }
+    lappend a -scope $fscope
+    lappend a -goto none
+    lappend a -filter {lappend ::find_helper::listnames [lindex [property get -name Name -system] 0]
+expr 1}
+    return $a
+}
+
+proc find_helper::list_names {} {
+    variable listnames
+    set listnames {}
+
+    set args [find_helper::build_list_args]
+    find_helper::show_cmd $args
+
+    catch {mode renderoff}
+    set rc [catch {find {*}$args} result]
+    catch {mode renderon}
+
+    if {$rc} {
+        find_helper::set_results "list failed:\n$result"
+        find_helper::set_status "ERROR: $result"
+        puts "find_helper ERROR: $result"
+        return
+    }
+
+    set n [llength $listnames]
+    set namelist [join $listnames ","]
+    if {$n == 0} {
+        find_helper::set_results "(nothing matched)"
+    } else {
+        find_helper::set_results $namelist
+    }
+    find_helper::set_status "$n listed"
+    puts "find_helper list ($n): $namelist"
+}
+
+#-----------------------------------------------------------------------------
 # Read-only text helpers
 #-----------------------------------------------------------------------------
 
@@ -347,6 +415,10 @@ proc find_helper::show {} {
     }
     grid $w.mm.wildcard $w.mm.regex $w.mm.nocase -sticky w -padx 6
     grid $w.mm.exact $w.mm.contains -sticky w -padx 6
+    # List button hugs the right edge, spanning both checkbox rows.
+    button $w.mm.list -text "List" -font FhButton -command find_helper::list_names
+    grid $w.mm.list -row 0 -column 3 -rowspan 2 -sticky nse -padx 6 -pady 2
+    grid columnconfigure $w.mm 3 -weight 1
 
     # --- selection flags ---
     labelframe $w.sel -text "Selection" -font FhBold
