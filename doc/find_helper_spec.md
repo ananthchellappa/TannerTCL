@@ -9,6 +9,11 @@ hit. The form assembles a `find ...` command from its widgets and runs it agains
 the active S-Edit window, exactly like the hand-written `find ... -modify {...}`
 one-liners already scattered through `user_fns.tcl`, `font_utils.tcl`, etc.
 
+It also offers a lightweight **List** action that dumps the matching names as a
+plain comma-separated list, ordered the way they read on screen, and **copy**
+support for the read-only panes (working around S-Edit's shadowed `clipboard`
+command).
+
 ## Non-goals
 
 - No new matching engine — we only build and run S-Edit `find` commands.
@@ -26,7 +31,7 @@ one-liners already scattered through `user_fns.tcl`, `font_utils.tcl`, etc.
 │                                                              │
 │ Name:   [____________________________________]               │
 │                                                              │
-│ Match mode:   ☐ -wildcard   ☐ -regex   ☐ -nocase             │
+│ Match mode:   ☐ -wildcard   ☐ -regex   ☐ -nocase   [ List ] │
 │               ☐ -exact      ☐ -contains                      │
 │                                                              │
 │ Selection:    ☐ -first   ☐ -add   ☐ -sub   ☐ -count          │
@@ -38,7 +43,7 @@ one-liners already scattered through `user_fns.tcl`, `font_utils.tcl`, etc.
 │   To   (subst): [__________________]                         │
 │ ☐ Report modified (pre-existing) names                       │
 │ ──────────────────────────────────────────────────────────  │
-│ [ Build Command ]   [ Run ]            [ Close ]             │
+│ [ Build Command ] [ Run ] [ Copy Results ] [ Reset ] [Close]│
 │ ──────────────────────────────────────────────────────────  │
 │ Command:                                                     │
 │ ┌──────────────────────────────────────────────────────┐    │
@@ -164,6 +169,85 @@ If From is empty and Report is off, **no `-modify`** is emitted — a plain find
 
 ---
 
+## The **List** action (dump matching names, screen-ordered)
+
+**List** is deliberately *independent* of Build/Run. It answers a different
+question — "just give me the names that match" — and never renames, never
+touches the Selection flags, and emits no `-modify`.
+
+`build_list_args` assembles a find using **only** the match criteria:
+
+```
+find <type> [-name <name>] [-wildcard] [-regex] [-nocase] [-exact] [-contains] \
+            -scope <scope> -goto none -filter {<collect script>}
+```
+
+Collection uses **`-filter`, not `-modify`** (read-only intent, no modify
+context needed). The filter body is a *static* braced script (same
+no-interpolation safety as the rename block) that appends each match's
+`{Name X Y}` to the namespace list `::find_helper::listnames` and returns true so
+every name-matched object is kept:
+
+```tcl
+lappend ::find_helper::listnames [list \
+    [lindex [property get -name Name -system] 0] \
+    [lindex [property get -name X    -system] 0] \
+    [lindex [property get -name Y    -system] 0]]
+expr 1
+```
+
+The trailing `expr 1` is important — a `-filter` body must return a boolean;
+returning true keeps the object in the result set (and avoids errors from a
+non-boolean last value).
+
+**Screen ordering (`order_by_screen`).** `find`/`-filter` visit objects in an
+internal order, not a visual one, so the collected `{Name X Y}` triples are
+sorted afterward:
+
+- Compute the X-spread and Y-spread (`max − min`) across all matches.
+- If **X-spread ≥ Y-spread** → objects lie more horizontally → sort **ascending
+  X** (left → right).
+- Otherwise → sort **descending Y** (top → bottom; larger Y is higher on the
+  schematic).
+
+This assumes the matched objects are spread out more along one axis than the
+other (a row or a column of pins) — ties fall to horizontal. The result is
+`join`ed with commas into the *Results* box and echoed to the console. No
+dedup (repeated names, e.g. multi-pin supplies, appear once per object).
+
+---
+
+## Copy support (read-only panes → OS clipboard)
+
+**Problem.** S-Edit's embedded interpreter shadows Tk's `clipboard` command with
+its own (design-object) clipboard. The stock `tk_textCopy` binding therefore
+fails on `clipboard clear -displayof …` with *"Extraneous argument: clear"* and
+raises an **Application Error** pop-up on Ctrl-C.
+
+**Fix (`copy_results`)** — avoid the shadowed commands entirely:
+
+- Read the highlighted text straight off the widget's own `sel` tag
+  (`$t get sel.first sel.last`), or the whole pane (`$t get 1.0 end-1c`) if
+  nothing is highlighted. This uses **neither** `clipboard` **nor** `selection`.
+- Push it to the Windows clipboard via `clip.exe`: `open "|clip" w`,
+  `puts -nonewline`, `close`. Wrapped in `catch`; on failure (e.g. pipes/exec
+  disabled) it degrades to `puts`-ing the text to the console and never raises.
+
+**Binding.** The crashing class binding is preempted on both read-only panes
+(`.res.t` and `.cmd`) by instance-level bindings that call `copy_results` and
+`break`:
+
+```tcl
+bind $_t <<Copy>>         {find_helper::copy_results %W; break}
+bind $_t <Control-c>      {find_helper::copy_results %W; break}
+bind $_t <Control-Insert> {find_helper::copy_results %W; break}
+```
+
+`break` stops the Text-class binding (`tk_textCopy`) from running afterward. A
+**Copy Results** button provides the same action for discoverability.
+
+---
+
 ## Execution
 
 - Build the argument **list** (not a string) and invoke with expansion:
@@ -181,16 +265,24 @@ If From is empty and Report is off, **no `-modify`** is emitted — a plain find
 - **Build Command** — assemble and show the command in the read-only *Command*
   box **without running**. Lets the user sanity-check before mutating.
 - **Run** — assemble, show, and execute; populate *Results* and *Status*.
+- **List** (in the Match-mode frame, right edge) — dump the matching names as a
+  screen-ordered comma-separated list into *Results*; ignores Selection/Rename.
+- **Copy Results** — copy the *Results* pane (or its highlighted selection) to
+  the OS clipboard.
+- **Reset** — restore all fields to defaults.
 - **Close** — destroy the form.
 
 ### Results / Status
 
 - *Command* box: the assembled command (for transparency / copy).
 - *Results* box (read-only, scrollable): one line per hit. Rename → `old  ->  new`;
-  report-only → `name`. Failures listed under a `FAILED:` heading.
-- *Status* line: e.g. `7 found, 7 renamed, 0 failed`, or the error message if
-  `find` threw.
+  report-only → `name`; **List** → a single comma-separated, screen-ordered line
+  of names. Failures listed under a `FAILED:` heading.
+- *Status* line: e.g. `7 found, 7 renamed, 0 failed`, `7 listed`, or the error
+  message if `find` threw.
 - Everything is also `puts` to the console for log/history.
+- Both read-only panes support **copy** (Ctrl-C / `<<Copy>>` / Copy Results
+  button) despite the shadowed `clipboard` command — see *Copy support*.
 
 ---
 
@@ -251,6 +343,10 @@ buttons, `FhSmall` for the status line.
 | `find_helper::build_only` | Assemble + show the command without running. |
 | `find_helper::build_args` | Return the `find` argument list from current widget state. |
 | `find_helper::build_modscript {do_rename do_report}` | Return the `-modify` body. |
+| `find_helper::list_names` | **List** action: collect + screen-order matching names, show as CSV list. |
+| `find_helper::build_list_args` | Return the match-only `find` args (with the collecting `-filter`) for List. |
+| `find_helper::order_by_screen {entries}` | Sort `{Name X Y}` triples left→right or top→bottom; return names. |
+| `find_helper::copy_results {?t?}` | Copy a pane's text (or its selection) to the OS clipboard via `clip.exe`. |
 | `find_helper::link {which}` | Apply the checkbox auto-uncheck rules. |
 | `find_helper::reset` | Restore defaults. |
 
@@ -277,4 +373,8 @@ workspace bindkeys -command {Find Navigator} -key "Ctrl+Shift+G"
 - A live preview of matches before committing a rename (dry-run highlighting).
 - Choosing the rename target property (always `Name` for now).
 - Optional `-nocase` on the regsub substitution.
+- Optional de-duplication / `-unique` for the **List** output (currently one
+  entry per matched object).
+- Copy currently targets the Windows `clip.exe`; a cross-platform path
+  (`pbcopy`/`xclip`) if the tool ever runs off Windows.
 ```

@@ -28,7 +28,7 @@ over. Open the schematic you want to work on first — the tool always acts on t
 Object: [port ▾]            Scope: [view ▾]
 Name:   [______________________________]
 
-Match mode:   □ -wildcard  □ -regex  □ -nocase
+Match mode:   □ -wildcard  □ -regex  □ -nocase     [ List ]
               □ -exact     □ -contains
 Selection:    □ -first  □ -add  □ -sub  □ -count
               ☑ -goto none
@@ -38,19 +38,24 @@ Rename (regsub on Name, via -modify):
    To   (subst): [________________]
    □ Report modified (pre-existing) names
 
-[ Build Command ]  [ Run ]  [ Reset ]            [ Close ]
+[ Build Command ] [ Run ] [ Copy Results ] [ Reset ]   [ Close ]
 
 Command:   (read-only — the exact command that will run)
 Results:   (read-only, scrollable — what happened)
 Status:    7 matched, 7 renamed, 0 failed
 ```
 
-**Two buttons do the work:**
+**The buttons:**
 
 - **Build Command** — assembles the command and shows it in the *Command* box but
   **does not run it**. Use this to look before you leap.
 - **Run** — assembles, shows, and **executes** it, then fills in *Results* and
   *Status*.
+- **List** (top-right, in the Match-mode box) — a quick way to **dump the names**
+  that match, as a comma-separated list, in the order they appear on screen. It
+  ignores the Selection and Rename settings entirely (see §6a).
+- **Copy Results** — copies the *Results* box to the clipboard (or just the part
+  you've highlighted). You can also press **Ctrl-C** in the box.
 
 `Reset` puts every field back to defaults. `Close` hides the window.
 
@@ -194,6 +199,33 @@ a rename.
 
 ---
 
+## 6a. The List button — just give me the names
+
+Sometimes you don't want to select or rename anything — you just want a **plain
+list of the names** that match, to paste into a spreadsheet, an email, or a
+script. That's what **List** is for.
+
+Set **Object**, **Name**, **Match mode**, and **Scope**, then click **List**. The
+*Results* box fills with a single comma-separated line:
+
+```
+clk_in,data0,data1,data2,data3,rst_n,en
+```
+
+- It uses **only** your match criteria (Object + Name + Match mode + Scope). It
+  **ignores** the Selection checkboxes and the Rename fields — List never selects,
+  never renames.
+- The names come out **in the order they appear on screen** — left-to-right for a
+  row of pins, or top-to-bottom for a column. (The tool looks at whether your
+  matches are spread out more horizontally or vertically and orders by that axis.)
+- Every matched object contributes one entry, so a name that appears on several
+  objects (e.g. a supply pin repeated around a symbol) shows up more than once.
+
+To get the text out, click **Copy Results** (or select the line and press
+**Ctrl-C**). It's also echoed to the S-Edit console.
+
+---
+
 ## 7. A safe workflow (recommended)
 
 1. Set **Object**, **Name**, **Match mode**, and **Scope** for what you want.
@@ -217,9 +249,16 @@ hierarchy.
   in `{ }` (e.g. `-name {v.*_port[12]}`), that's just Tcl showing the value as one
   token; the braces are **not** added to your search.
 - **Results box** — the rename list (`old -> new`), the matched-name list
-  (report-only), or `find returned: …` for a plain search. Scrollable.
-- **Status line** — a one-line summary: matches found, renamed, and failed.
+  (report-only), the comma-separated **List** output, or `find returned: …` for a
+  plain search. Scrollable.
+- **Status line** — a one-line summary: matches found, renamed, failed, or
+  `7 listed` after a List.
 - Everything is also echoed to the S-Edit command console, so you have a history.
+
+**Copying text out.** Both the *Command* and *Results* boxes are copy-enabled:
+highlight what you want and press **Ctrl-C**, or click **Copy Results** to grab
+the whole *Results* box. (With nothing highlighted, Ctrl-C copies the whole box.)
+The text goes to the Windows clipboard, ready to paste anywhere.
 
 ---
 
@@ -231,6 +270,7 @@ hierarchy.
 | Count net labels containing `clk` | netlabel | clk | -contains | -count |
 | Select all instances named `U…` | instance | U* | -wildcard | — |
 | Add `clk*` ports to current selection | port | clk* | -wildcard | -add |
+| Get a comma-separated list of matching names | any | *(your filter)* | *(any)* | click **List** |
 | List ports matching a regex (no change) | port | `v.*_port[12]` | -regex | tick **Report**, From empty |
 | Append `_n` to all matched ports | port | *(your filter)* | — | From `$`, To `_n`, **Report** |
 | Strip `_tmp` suffix from net labels | netlabel | `*_tmp` | -wildcard | From `_tmp$`, To *(empty)* |
@@ -248,6 +288,14 @@ hierarchy.
   or is otherwise illegal; adjust your To pattern.
 - **The view jumps around during a big rename.** Make sure **-goto none** is
   checked (it is by default).
+- **Ctrl-C used to pop an "Application Error" (`Extraneous argument: "clear"`).**
+  That was S-Edit's clipboard quirk; the current version handles copy itself, so
+  update your scripts if you still see it. If a copy ever can't reach the
+  clipboard, the text is printed to the S-Edit console instead so you can still
+  grab it.
+- **List gave me the same name several times.** That's expected — List reports one
+  entry per matched object, and some names live on multiple objects. (Ask for a
+  de-duplicated option if you'd find it useful.)
 - **I made a mistake.** Use S-Edit **Undo (Ctrl+Z)** right away, then refine your
   From/To and try again on a small selection.
 
