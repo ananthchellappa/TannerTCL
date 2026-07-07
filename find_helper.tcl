@@ -49,6 +49,18 @@ namespace eval find_helper {
     variable listnames {}
 
     variable inited   0
+
+    # History of form states the user actually RAN (pushed on each Run click).
+    # Each entry is a {var value var value ...} snapshot of the input fields.
+    # histidx is the navigation cursor: it points one past the newest entry
+    # ([llength history]) when we are sitting on the live (unsaved) state, so the
+    # first Up recalls the most recently run state. histlabel drives the counter
+    # shown in the History box.
+    variable statevars {ftype fname fscope wildcard regex nocase exact contains \
+                        first add sub count gotonone ffrom fto report}
+    variable history  {}
+    variable histidx  0
+    variable histlabel "(empty)"
 }
 
 #-----------------------------------------------------------------------------
@@ -168,6 +180,9 @@ proc find_helper::run {} {
     set subFrom $ffrom
     set subTo $fto
 
+    # Record the state we're about to run so it can be recalled from History.
+    find_helper::history_save
+
     set args [find_helper::build_args]
     find_helper::show_cmd $args
 
@@ -236,6 +251,81 @@ proc find_helper::report_results {findret} {
     set msg [join $parts ", "]
     find_helper::set_status $msg
     puts "find_helper: $msg"
+}
+
+#-----------------------------------------------------------------------------
+# History (recall states the user actually ran)
+#-----------------------------------------------------------------------------
+
+# Snapshot the current input-field state as a {var value ...} list.
+proc find_helper::snapshot {} {
+    variable statevars
+    set s {}
+    foreach v $statevars {
+        variable $v
+        lappend s $v [set $v]
+    }
+    return $s
+}
+
+# Push the current state onto the history stack. Called on Run, so the stack
+# only ever holds states the user genuinely used. Consecutive exact duplicates
+# are collapsed so re-running the same form doesn't grow the stack.
+proc find_helper::history_save {} {
+    variable history
+    variable histidx
+    set s [find_helper::snapshot]
+    if {![llength $history] || [lindex $history end] ne $s} {
+        lappend history $s
+    }
+    set histidx [llength $history]   ;# park past the newest -> next Up = newest
+    find_helper::hist_update_label
+}
+
+# Copy a saved snapshot back onto the input-field vars.
+proc find_helper::apply_state {s} {
+    foreach {v val} $s {
+        variable $v
+        set $v $val
+    }
+}
+
+proc find_helper::hist_update_label {} {
+    variable history
+    variable histidx
+    variable histlabel
+    set n [llength $history]
+    if {$n == 0} {
+        set histlabel "(empty)"
+    } elseif {$histidx >= $n} {
+        set histlabel "$n saved"
+    } else {
+        set histlabel "[expr {$histidx + 1}] / $n"
+    }
+}
+
+# Up = older state, Down = newer state. Both apply the recalled snapshot to the
+# form immediately and clamp at the ends of the stack.
+proc find_helper::history_up {} {
+    variable history
+    variable histidx
+    set n [llength $history]
+    if {$n == 0} { find_helper::set_status "history empty"; return }
+    if {$histidx > 0} { incr histidx -1 }
+    find_helper::apply_state [lindex $history $histidx]
+    find_helper::hist_update_label
+    find_helper::set_status "recalled history [expr {$histidx + 1}]/$n"
+}
+
+proc find_helper::history_down {} {
+    variable history
+    variable histidx
+    set n [llength $history]
+    if {$n == 0} { find_helper::set_status "history empty"; return }
+    if {$histidx < $n - 1} { incr histidx }
+    find_helper::apply_state [lindex $history $histidx]
+    find_helper::hist_update_label
+    find_helper::set_status "recalled history [expr {$histidx + 1}]/$n"
 }
 
 #-----------------------------------------------------------------------------
@@ -417,6 +507,11 @@ proc find_helper::reset {} {
     variable ffrom;    set ffrom ""
     variable fto;      set fto ""
     variable report;   set report 0
+    # Reset clears the form but PRESERVES history (it's a record of what you
+    # ran); just park the recall cursor past the newest entry.
+    variable history
+    variable histidx;  set histidx [llength $history]
+    find_helper::hist_update_label
     find_helper::set_status ""
     catch {find_helper::set_results ""}
     catch {find_helper::set_txt .findHelper.cmd ""}
@@ -504,18 +599,36 @@ proc find_helper::show {} {
     checkbutton $w.goto -text "-goto none" -variable ::find_helper::gotonone -font FhLabel
     pack $w.goto -side top -anchor w -padx 14 -pady 2
 
-    # --- rename ---
-    labelframe $w.rn -text "Rename (regsub on Name, via -modify)" -font FhBold
-    pack $w.rn -side top -fill x -padx 10 -pady 4
-    label $w.rn.fl -text "From (regex):" -font FhLabel
-    entry $w.rn.fe -textvariable ::find_helper::ffrom -font FhEntry -width 32
-    label $w.rn.tl -text "To (subst):" -font FhLabel
-    entry $w.rn.te -textvariable ::find_helper::fto -font FhEntry -width 32
-    grid $w.rn.fl $w.rn.fe -sticky w -padx 4 -pady 2
-    grid $w.rn.tl $w.rn.te -sticky w -padx 4 -pady 2
-    checkbutton $w.rn.rep -text "Report modified (pre-existing) names" \
+    # --- rename + history (side by side) ---
+    # Rename no longer spans the full width; History sits in the freed space to
+    # its right.
+    set rnrow [frame $w.rnrow]
+    pack $rnrow -side top -fill x -padx 10 -pady 4
+
+    labelframe $rnrow.rn -text "Rename (regsub on Name, via -modify)" -font FhBold
+    pack $rnrow.rn -side left -fill y
+    label $rnrow.rn.fl -text "From (regex):" -font FhLabel
+    entry $rnrow.rn.fe -textvariable ::find_helper::ffrom -font FhEntry -width 26
+    label $rnrow.rn.tl -text "To (subst):" -font FhLabel
+    entry $rnrow.rn.te -textvariable ::find_helper::fto -font FhEntry -width 26
+    grid $rnrow.rn.fl $rnrow.rn.fe -sticky w -padx 4 -pady 2
+    grid $rnrow.rn.tl $rnrow.rn.te -sticky w -padx 4 -pady 2
+    checkbutton $rnrow.rn.rep -text "Report modified (pre-existing) names" \
         -variable ::find_helper::report -font FhLabel
-    grid $w.rn.rep -sticky w -padx 4 -pady 2 -columnspan 2
+    grid $rnrow.rn.rep -sticky w -padx 4 -pady 2 -columnspan 2
+
+    # History: recall states you actually Ran. Up = older, Down = newer.
+    labelframe $rnrow.hist -text "History" -font FhBold
+    pack $rnrow.hist -side left -fill both -expand 1 -padx {10 0}
+    button $rnrow.hist.up -text "▲ Prev" -font FhButton \
+        -command find_helper::history_up
+    button $rnrow.hist.dn -text "▼ Next" -font FhButton \
+        -command find_helper::history_down
+    label $rnrow.hist.lbl -textvariable ::find_helper::histlabel -font FhSmall \
+        -anchor center
+    pack $rnrow.hist.up  -side top -padx 8 -pady {4 2} -fill x
+    pack $rnrow.hist.dn  -side top -padx 8 -pady 2 -fill x
+    pack $rnrow.hist.lbl -side top -padx 8 -pady {2 4} -fill x
 
     # --- buttons ---
     set bb [frame $w.bb]
