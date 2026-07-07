@@ -33,10 +33,10 @@ Match mode:   □ -wildcard  □ -regex  □ -nocase     [ List ]
 Selection:    □ -first  □ -add  □ -sub  □ -count
               ☑ -goto none
 
-Rename (regsub on Name, via -modify):
-   From (regex): [________________]
-   To   (subst): [________________]
-   □ Report modified (pre-existing) names
+Rename (regsub on Name, via -modify):      History:
+   From (regex): [________________]          [ ▲ Prev ]
+   To   (subst): [________________]          [ ▼ Next ]
+   □ Report modified (pre-existing) names       3 / 5
 
 [ Build Command ] [ Run ] [ Copy Results ] [ Reset ]   [ Close ]
 
@@ -223,6 +223,26 @@ clk_in,data0,data1,data2,data3,rst_n,en
 
 To get the text out, click **Copy Results** (or select the line and press
 **Ctrl-C**). It's also echoed to the S-Edit console.
+
+---
+
+## 6b. History — recall what you just ran
+
+The **History** box (right of the Rename section) remembers the form states you
+**actually ran**, so you can step back to a previous search or rename without
+re-typing it.
+
+- Every time you click **Run**, the current form (Object, Name, Match mode,
+  Selection, -goto none, Rename From/To, Report) is saved as one history entry.
+  (Build Command and List do **not** save — only Run does.)
+- Click **▲ Prev** to recall an *older* state, **▼ Next** to move back toward the
+  *newest*. The recalled state is applied to all the fields immediately, and the
+  counter (e.g. `3 / 5`) shows where you are.
+- The most recent **Run** is the first thing **▲ Prev** brings back, so you can
+  tweak-and-rerun quickly.
+- History lasts for as long as the window is open. **Reset** clears the form but
+  **keeps** your history (it's a record of what you ran). Closing S-Edit clears
+  it — it isn't saved between sessions.
 
 ---
 

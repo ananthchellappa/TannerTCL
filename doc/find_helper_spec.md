@@ -38,10 +38,11 @@ command).
 │                                                              │
 │ ☑ -goto none                                                 │
 │ ──────────────────────────────────────────────────────────  │
-│ Rename (via -modify, regsub on Name):                        │
-│   From (regex): [__________________]                         │
-│   To   (subst): [__________________]                         │
-│ ☐ Report modified (pre-existing) names                       │
+│ ┌─ Rename (via -modify, regsub on Name) ─┐  ┌─ History ────┐ │
+│ │  From (regex): [__________________]     │  │   [ ▲ Prev ] │ │
+│ │  To   (subst): [__________________]     │  │   [ ▼ Next ] │ │
+│ │ ☐ Report modified (pre-existing) names  │  │     3 / 5    │ │
+│ └─────────────────────────────────────────┘  └──────────────┘ │
 │ ──────────────────────────────────────────────────────────  │
 │ [ Build Command ] [ Run ] [ Copy Results ] [ Reset ] [Close]│
 │ ──────────────────────────────────────────────────────────  │
@@ -217,6 +218,31 @@ dedup (repeated names, e.g. multi-pin supplies, appear once per object).
 
 ---
 
+## History (recall states you actually ran)
+
+The **History** section sits to the right of a narrowed **Rename** frame (Rename
+only used ~half the form width). It lets the user step back through form states
+they previously **Ran** and re-apply them to the input fields.
+
+- **What counts as a state.** A snapshot of every input field —
+  `::find_helper::statevars` = `{ftype fname fscope wildcard regex nocase exact
+  contains first add sub count gotonone ffrom fto report}`. Taken by
+  `snapshot`, restored by `apply_state` (plain `set` of each namespace var, so
+  the bound widgets update live).
+- **When it's captured.** `run` calls `history_save` before assembling/executing,
+  so the stack only ever holds states the user *genuinely used* — never a
+  half-typed form (Build Command does **not** push; List does **not** push).
+  Consecutive exact-duplicate snapshots are collapsed so re-running the same form
+  doesn't grow the stack.
+- **Navigation.** `history_up` = older, `history_down` = newer; both apply the
+  recalled snapshot immediately and clamp at the ends. `histidx` is the cursor;
+  after a save it parks at `[llength history]` (one past the newest) so the first
+  **▲ Prev** recalls the most recently run state. The `histlabel` counter shows
+  `k / n` while recalling, `n saved` when parked, `(empty)` before any run.
+- **Persistence.** History is **not** persisted across sessions and is **kept**
+  across **Reset** (Reset clears the form but re-parks the cursor at the end —
+  the record of what you ran is preserved). No cross-session storage (future).
+
 ## Copy support (read-only panes → OS clipboard)
 
 **Problem.** S-Edit's embedded interpreter shadows Tk's `clipboard` command with
@@ -348,7 +374,12 @@ buttons, `FhSmall` for the status line.
 | `find_helper::order_by_screen {entries}` | Sort `{Name X Y}` triples left→right or top→bottom; return names. |
 | `find_helper::copy_results {?t?}` | Copy a pane's text (or its selection) to the OS clipboard via `clip.exe`. |
 | `find_helper::link {which}` | Apply the checkbox auto-uncheck rules. |
-| `find_helper::reset` | Restore defaults. |
+| `find_helper::snapshot` | Return a `{var value ...}` snapshot of the input fields (`statevars`). |
+| `find_helper::history_save` | Push the current snapshot onto the history stack (called by `run`). |
+| `find_helper::apply_state {s}` | Restore a snapshot onto the input-field vars. |
+| `find_helper::history_up` / `history_down` | Recall an older / newer saved state and apply it. |
+| `find_helper::hist_update_label` | Refresh the `k / n` History counter. |
+| `find_helper::reset` | Restore field defaults (keeps history, re-parks the cursor). |
 
 State helpers (`msg_error`, etc.) reuse the existing `uiutil::` namespace.
 `ttk` is already a dependency in the repo (`copy_current_cell_dialog.tcl`).
