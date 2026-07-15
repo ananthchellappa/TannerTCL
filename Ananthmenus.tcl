@@ -75,6 +75,8 @@ workspace menu -name {CUSTOM {Useful Commands} {Choose Scratchpad Library} }  -c
 workspace menu -name {CUSTOM {Useful Commands} {Find Navigator} }  -command {find_helper::show}
 workspace bindkeys -command {Find Navigator} -key "Ctrl+Shift+G"  ; # Find Navigator — find/select/rename/list ports,instances,netlabels
 
+workspace menu -name {CUSTOM {Useful Commands} {Instance Update} }  -command {inst_update::show}
+
 workspace menu -name {CUSTOM {Useful Commands} {Reset Grid} }  -command {res_grid}
 workspace bindkeys -command {Reset Grid} -key "Alt+R"  ; # reset snap grid to default (50)
 
