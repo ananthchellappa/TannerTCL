@@ -14,6 +14,13 @@
 #   name and only MasterLibrary changes (library migration). Choosing a real
 #   To-cell instead performs the many-to-one replacement.
 #
+# Get button:  seed From-library / From-cell from the selected instance(s).
+# List button: read-only report of matching instances (From-cell (none) counts
+#   as (any cell)): containing cell + instance name, plus the master cell when
+#   only the library is specified. List is the one action that runs on
+#   hierarchy scope; Build/Run reset hierarchy back to view with a warning
+#   (copy the built command and edit -scope to run hierarchy-wide by hand).
+#
 # Requires sed_helpers.tcl (sed_get_library_names, sed_get_current_library).
 #
 # Implementation notes (same safety rules as find_helper.tcl):
@@ -49,16 +56,21 @@ namespace eval inst_update {
     variable newLib  ""
     variable newCell ""     ;# empty = keep each instance's cell
 
+    variable gotonone  1
+
     variable hits  {}
     variable fails {}
 
     # {MasterLibrary MasterCell} pairs collected from the selection by Get
     variable getpairs {}
 
+    # {containingCell instName masterCell} rows collected by List
+    variable listrows {}
+
     variable inited 0
 
     # History of form states the user actually RAN (see find_helper.tcl).
-    variable statevars {nameRegex fromLib fromCell toLib toCell fscope}
+    variable statevars {nameRegex fromLib fromCell toLib toCell fscope gotonone}
     variable history  {}
     variable histidx  0
     variable histlabel "(empty)"
@@ -242,17 +254,33 @@ proc inst_update::refresh_run_state {} {
 # Command assembly
 #-----------------------------------------------------------------------------
 
-# Match criteria live in -filter: optional Name regex, then MasterLibrary /
-# MasterCell equality (empty fltCell = any cell). Static braced body.
-proc inst_update::build_filter_script {} {
+# Shared match logic for the -filter bodies: sets _ok from the optional Name
+# regex, then MasterLibrary / MasterCell equality (empty fltCell = any cell).
+# Static braced block; the callers append a static tail, so nothing from the
+# user is ever interpolated.
+proc inst_update::build_match_script {} {
     return {set _ok 1
 if {$::inst_update::fltName ne ""} {
     set _n [lindex [property get -name Name -system] 0]
     if {![regexp -- $::inst_update::fltName $_n]} { set _ok 0 }
 }
 if {$_ok && [lindex [property get -name MasterLibrary -system] 0] ne $::inst_update::fltLib} { set _ok 0 }
-if {$_ok && $::inst_update::fltCell ne "" && [lindex [property get -name MasterCell -system] 0] ne $::inst_update::fltCell} { set _ok 0 }
-expr {$_ok}}
+if {$_ok && $::inst_update::fltCell ne "" && [lindex [property get -name MasterCell -system] 0] ne $::inst_update::fltCell} { set _ok 0 }}
+}
+
+proc inst_update::build_filter_script {} {
+    return "[inst_update::build_match_script]\nexpr {\$_ok}"
+}
+
+# List variant: additionally collects {containingCell instName masterCell} per
+# match. `workspace getactive` inside the find traversal returns
+# {cellName viewName libraryName} of the view CONTAINING the instance - that is
+# what makes hierarchy-scope listing report locations.
+proc inst_update::build_list_script {} {
+    set s [inst_update::build_match_script]
+    append s \n {if {$_ok} {lappend ::inst_update::listrows [list [lindex [workspace getactive] 0] [lindex [property get -name Name -system] 0] [lindex [property get -name MasterCell -system] 0]]}}
+    append s \n "expr {\$_ok}"
+    return $s
 }
 
 # The update lives in -modify. Library is set before cell so that a keep-cell
@@ -277,11 +305,22 @@ if {[catch {
 
 proc inst_update::build_args {} {
     variable fscope
+    variable gotonone
+    set a [list instance]
+    lappend a -scope $fscope
+    if {$gotonone} { lappend a -goto none }
+    lappend a -filter [inst_update::build_filter_script]
+    lappend a -modify [inst_update::build_mod_script]
+    return $a
+}
+
+# List is read-only: match criteria + the collecting filter, always -goto none.
+proc inst_update::build_list_args {} {
+    variable fscope
     set a [list instance]
     lappend a -scope $fscope
     lappend a -goto none
-    lappend a -filter [inst_update::build_filter_script]
-    lappend a -modify [inst_update::build_mod_script]
+    lappend a -filter [inst_update::build_list_script]
     return $a
 }
 
@@ -305,10 +344,25 @@ proc inst_update::set_scratch {} {
 # Build / Run
 #-----------------------------------------------------------------------------
 
+# Build and Run never operate on hierarchy scope (List does - that is its main
+# use). If scope is hierarchy: reset it to view, explain in the Results pane,
+# and return 1. The intended hierarchy-update route is deliberate: Build with
+# view, copy the command, edit -scope to hierarchy, run at the console.
+proc inst_update::hier_guard {} {
+    variable fscope
+    if {$fscope ne "hierarchy"} { return 0 }
+    set fscope view
+    inst_update::set_results "WARNING: scope was 'hierarchy' - reset to 'view'.\nBuild and Run never execute on hierarchy from this form. To update across the\nhierarchy: Build with scope 'view', copy the command, change '-scope view' to\n'-scope hierarchy', and run it at the console.\n(List runs on hierarchy directly.)"
+    return 1
+}
+
 proc inst_update::build_only {} {
+    set was_hier [inst_update::hier_guard]
     inst_update::set_scratch
     inst_update::show_cmd [inst_update::build_args]
-    if {[inst_update::runnable]} {
+    if {$was_hier} {
+        inst_update::set_status "scope hierarchy -> view; command built (not run)"
+    } elseif {[inst_update::runnable]} {
         inst_update::set_status "command built (not run)"
     } else {
         inst_update::set_status "command built (not run); pick a From-cell to enable Run"
@@ -319,6 +373,10 @@ proc inst_update::run {} {
     variable hits
     variable fails
 
+    if {[inst_update::hier_guard]} {
+        inst_update::set_status "Run blocked: scope hierarchy -> view (see Results)"
+        return
+    }
     if {![inst_update::runnable]} {
         inst_update::set_status "Run blocked: From-cell is (none)"
         return
@@ -377,6 +435,61 @@ proc inst_update::report_results {} {
     if {$nfail > 0} { append msg ", $nfail failed" }
     inst_update::set_status $msg
     puts "inst_update: $msg"
+}
+
+#-----------------------------------------------------------------------------
+# List (report locations of matching instances; read-only, works on hierarchy)
+#-----------------------------------------------------------------------------
+
+# From-cell (none) is treated like (any cell) here: set_scratch maps both to an
+# empty fltCell, so List only needs the library (+ optional Name regex).
+# Output: always the containing cell + instance name; when the cell criterion
+# is empty (only the library specified) the master cell column is added.
+proc inst_update::list_matches {} {
+    variable listrows
+    variable fltCell
+
+    set listrows {}
+    inst_update::set_scratch
+
+    set args [inst_update::build_list_args]
+    inst_update::show_cmd $args
+
+    catch {mode renderoff}
+    set rc [catch {find {*}$args} result]
+    catch {mode renderon}
+
+    if {$rc} {
+        inst_update::set_results "list failed:\n$result"
+        inst_update::set_status "ERROR: $result"
+        puts "inst_update ERROR: $result"
+        return
+    }
+
+    set rows [lsort -dictionary -index 0 $listrows]   ;# group by containing cell
+    set n [llength $rows]
+    set lines {}
+    if {$n == 0} {
+        lappend lines "(nothing matched)"
+    } else {
+        lappend lines "$n matching instance(s):"
+        if {$fltCell eq ""} {
+            lappend lines [format "  %-20s %-24s %s" "In cell" "Instance" "Master cell"]
+            foreach r $rows {
+                foreach {cont inst master} $r break
+                lappend lines [format "  %-20s %-24s %s" $cont $inst $master]
+            }
+        } else {
+            lappend lines [format "  %-20s %s" "In cell" "Instance"]
+            foreach r $rows {
+                foreach {cont inst master} $r break
+                lappend lines [format "  %-20s %s" $cont $inst]
+            }
+        }
+    }
+    inst_update::set_results [join $lines "\n"]
+    inst_update::set_status "$n listed"
+    puts "inst_update: $n listed"
 }
 
 #-----------------------------------------------------------------------------
@@ -515,6 +628,7 @@ proc inst_update::reset {} {
     variable NONE; variable KEEP
     variable nameRegex; set nameRegex ""
     variable fscope;    set fscope view
+    variable gotonone;  set gotonone 1
 
     set libs [inst_update::get_libs]
     if {[catch {set cur [sed_get_current_library]}] || $cur eq "" \
@@ -578,9 +692,12 @@ proc inst_update::show {} {
     entry $w.tgt.nme -textvariable ::inst_update::nameRegex -font IuEntry -width 26
     label $w.tgt.scl -text "Scope:" -font IuLabel
     ttk::combobox $w.tgt.sce -state readonly -width 10 \
-        -values {view selection} \
+        -values {view selection hierarchy} \
         -textvariable ::inst_update::fscope -font IuEntry
-    grid $w.tgt.nml $w.tgt.nme $w.tgt.scl $w.tgt.sce -sticky w -padx 4 -pady 2
+    button $w.tgt.list -text "List" -font IuButton \
+        -command inst_update::list_matches
+    grid $w.tgt.nml $w.tgt.nme $w.tgt.scl $w.tgt.sce $w.tgt.list -sticky w -padx 4 -pady 2
+    grid configure $w.tgt.list -sticky ew
 
     label $w.tgt.fll -text "From library:" -font IuLabel
     ttk::combobox $w.tgt.fle -state readonly -width 22 \
@@ -593,8 +710,13 @@ proc inst_update::show {} {
     button $w.tgt.get -text "Get" -font IuButton \
         -command inst_update::get_from_selection
     grid $w.tgt.fll $w.tgt.fle $w.tgt.fcl $w.tgt.fce $w.tgt.get -sticky w -padx 4 -pady 2
+    grid configure $w.tgt.get -sticky ew
     bind $w.tgt.fle <<ComboboxSelected>> inst_update::on_from_lib_changed
     bind $w.tgt.fce <<ComboboxSelected>> inst_update::on_from_cell_changed
+
+    # --- -goto none ---
+    checkbutton $w.goto -text "-goto none" -variable ::inst_update::gotonone -font IuLabel
+    pack $w.goto -side top -anchor w -padx 14 -pady 2
 
     # --- replacement + history (side by side) ---
     set rrow [frame $w.rrow]
