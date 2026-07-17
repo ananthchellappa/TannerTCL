@@ -711,6 +711,8 @@ proc inst_update::show {} {
         -command inst_update::get_from_selection
     grid $w.tgt.fll $w.tgt.fle $w.tgt.fcl $w.tgt.fce $w.tgt.get -sticky w -padx 4 -pady 2
     grid configure $w.tgt.get -sticky ew
+    grid configure $w.tgt.fce -sticky ew
+    grid columnconfigure $w.tgt 3 -weight 1
     bind $w.tgt.fle <<ComboboxSelected>> inst_update::on_from_lib_changed
     bind $w.tgt.fce <<ComboboxSelected>> inst_update::on_from_cell_changed
 
@@ -722,8 +724,10 @@ proc inst_update::show {} {
     set rrow [frame $w.rrow]
     pack $rrow -side top -fill x -padx 10 -pady 4
 
+    # Replacement absorbs any extra width (its comboboxes stretch with it);
+    # History stays just wide enough for the Prev/Next buttons.
     labelframe $rrow.rep -text "Replacement (new master)" -font IuBold
-    pack $rrow.rep -side left -fill y
+    pack $rrow.rep -side left -fill both -expand 1
     label $rrow.rep.tll -text "To library:" -font IuLabel
     ttk::combobox $rrow.rep.tle -state readonly -width 22 \
         -textvariable ::inst_update::toLib -font IuEntry \
@@ -734,11 +738,13 @@ proc inst_update::show {} {
         -postcommand inst_update::populate_to_cells
     grid $rrow.rep.tll $rrow.rep.tle -sticky w -padx 4 -pady 2
     grid $rrow.rep.tcl $rrow.rep.tce -sticky w -padx 4 -pady 2
+    grid configure $rrow.rep.tle $rrow.rep.tce -sticky ew
+    grid columnconfigure $rrow.rep 1 -weight 1
     bind $rrow.rep.tle <<ComboboxSelected>> inst_update::on_to_lib_changed
     bind $rrow.rep.tce <<ComboboxSelected>> inst_update::refresh_run_state
 
     labelframe $rrow.hist -text "History" -font IuBold
-    pack $rrow.hist -side left -fill both -expand 1 -padx {10 0}
+    pack $rrow.hist -side left -fill y -padx {10 0}
     button $rrow.hist.up -text "▲ Prev" -font IuButton \
         -command inst_update::history_up
     button $rrow.hist.dn -text "▼ Next" -font IuButton \
