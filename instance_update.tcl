@@ -8,11 +8,17 @@
 # Target section:   optional Name regex, From-library, From-cell.
 #   From-cell defaults to "(none)" (Run disabled; Build still works) and offers
 #   "(any cell)" at the BOTTOM of the list (deliberately effortful to reach).
+#   "(Regex)" (right after (none)) enables the From-cell regex entry below the
+#   dropdowns: instances whose MasterCell matches the regex are targeted.
+#   Unanchored partial match, same semantics as the Name regex - anchor with
+#   ^...$ for exact sets. Run stays disabled while the regex text is empty.
 # Replacement:      To-library, To-cell dropdowns; the To-cell list re-reads the
 #   cells of the chosen To-library. Picking From-cell = (any cell) forces
 #   To-cell to "(n/a - keep cell)": each matched instance keeps its own cell
 #   name and only MasterLibrary changes (library migration). Choosing a real
-#   To-cell instead performs the many-to-one replacement.
+#   To-cell instead performs the many-to-one replacement. The same two modes
+#   apply to (Regex): keep-cell = library-only migration of the matched cells,
+#   concrete To-cell = many-to-one replacement.
 #
 # Get button:  seed From-library / From-cell from the selected instance(s).
 # List button: read-only report of matching instances (From-cell (none) counts
@@ -36,25 +42,28 @@
 
 namespace eval inst_update {
     # dropdown sentinels (parenthesized so they cannot collide with real names)
-    variable NONE "(none)"
-    variable ANY  "(any cell)"
-    variable KEEP "(n/a - keep cell)"
+    variable NONE  "(none)"
+    variable ANY   "(any cell)"
+    variable KEEP  "(n/a - keep cell)"
+    variable REGEX "(Regex)"
 
     # form state (bound to widgets)
     variable nameRegex ""
     variable fromLib   ""
     variable fromCell  "(none)"
+    variable cellRegex ""
     variable toLib     ""
     variable toCell    "(n/a - keep cell)"
     variable fscope    view
     variable status    ""
 
     # run-time scratch (referenced by the static -filter / -modify bodies)
-    variable fltName ""
-    variable fltLib  ""
-    variable fltCell ""     ;# empty = any cell
-    variable newLib  ""
-    variable newCell ""     ;# empty = keep each instance's cell
+    variable fltName   ""
+    variable fltLib    ""
+    variable fltCell   ""   ;# empty = any cell
+    variable fltCellRe ""   ;# cell-name regex; empty = no regex criterion
+    variable newLib    ""
+    variable newCell   ""   ;# empty = keep each instance's cell
 
     variable gotonone  1
 
@@ -70,7 +79,7 @@ namespace eval inst_update {
     variable inited 0
 
     # History of form states the user actually RAN (see find_helper.tcl).
-    variable statevars {nameRegex fromLib fromCell toLib toCell fscope gotonone}
+    variable statevars {nameRegex fromLib fromCell cellRegex toLib toCell fscope gotonone}
     variable history  {}
     variable histidx  0
     variable histlabel "(empty)"
@@ -119,12 +128,14 @@ proc inst_update::populate_libs {} {
 proc inst_update::populate_from_cells {} {
     variable NONE
     variable ANY
+    variable REGEX
     variable fromLib
     set cb .instUpdate.tgt.fce
     if {![winfo exists $cb]} { return 0 }
     set cells [inst_update::get_cells $fromLib]
-    # (none) first = default; (any cell) LAST so it takes effort to reach
-    $cb configure -values [concat [list $NONE] $cells [list $ANY]]
+    # (none) first = default; (Regex) next so the regex mode is easy to reach;
+    # (any cell) LAST so it takes effort to reach
+    $cb configure -values [concat [list $NONE $REGEX] $cells [list $ANY]]
     return [llength $cells]
 }
 
@@ -169,12 +180,17 @@ proc inst_update::on_to_lib_changed {} {
 proc inst_update::on_from_cell_changed {} {
     variable ANY
     variable KEEP
+    variable REGEX
     variable fromCell
     variable toCell
     # (any cell) forces To-cell to n/a: library-only retarget unless the user
     # deliberately picks a concrete To-cell afterwards (many-to-one)
     if {$fromCell eq $ANY} { set toCell $KEEP }
     inst_update::refresh_run_state
+    # refresh_run_state has just enabled the regex entry; park the cursor there
+    if {$fromCell eq $REGEX && [winfo exists .instUpdate.tgt.cre]} {
+        focus .instUpdate.tgt.cre
+    }
 }
 
 # "Get": seed From-library / From-cell from the selected instance(s).
@@ -236,15 +252,25 @@ expr 1}
 
 proc inst_update::runnable {} {
     variable NONE
+    variable REGEX
     variable fromLib
     variable fromCell
+    variable cellRegex
     variable toLib
     variable toCell
+    if {$fromCell eq $REGEX && [string trim $cellRegex] eq ""} { return 0 }
     expr {$fromLib ne "" && $toLib ne "" && $toCell ne "" \
           && $fromCell ne "" && $fromCell ne $NONE}
 }
 
 proc inst_update::refresh_run_state {} {
+    variable REGEX
+    variable fromCell
+    # the From-cell regex entry is live only while From-cell is (Regex)
+    set e .instUpdate.tgt.cre
+    if {[winfo exists $e]} {
+        $e configure -state [expr {$fromCell eq $REGEX ? "normal" : "disabled"}]
+    }
     set b .instUpdate.bb.run
     if {![winfo exists $b]} return
     $b configure -state [expr {[inst_update::runnable] ? "normal" : "disabled"}]
@@ -255,9 +281,10 @@ proc inst_update::refresh_run_state {} {
 #-----------------------------------------------------------------------------
 
 # Shared match logic for the -filter bodies: sets _ok from the optional Name
-# regex, then MasterLibrary / MasterCell equality (empty fltCell = any cell).
-# Static braced block; the callers append a static tail, so nothing from the
-# user is ever interpolated.
+# regex, then MasterLibrary equality, then MasterCell equality (fltCell) or
+# MasterCell regex (fltCellRe); at most one of the two is non-empty, both empty
+# = any cell. Static braced block; the callers append a static tail, so
+# nothing from the user is ever interpolated.
 proc inst_update::build_match_script {} {
     return {set _ok 1
 if {$::inst_update::fltName ne ""} {
@@ -265,7 +292,8 @@ if {$::inst_update::fltName ne ""} {
     if {![regexp -- $::inst_update::fltName $_n]} { set _ok 0 }
 }
 if {$_ok && [lindex [property get -name MasterLibrary -system] 0] ne $::inst_update::fltLib} { set _ok 0 }
-if {$_ok && $::inst_update::fltCell ne "" && [lindex [property get -name MasterCell -system] 0] ne $::inst_update::fltCell} { set _ok 0 }}
+if {$_ok && $::inst_update::fltCell ne "" && [lindex [property get -name MasterCell -system] 0] ne $::inst_update::fltCell} { set _ok 0 }
+if {$_ok && $::inst_update::fltCellRe ne "" && ![regexp -- $::inst_update::fltCellRe [lindex [property get -name MasterCell -system] 0]]} { set _ok 0 }}
 }
 
 proc inst_update::build_filter_script {} {
@@ -325,17 +353,19 @@ proc inst_update::build_list_args {} {
 }
 
 # Copy widget state into the scratch vars the static scripts read, mapping the
-# sentinels: (any cell) -> empty fltCell, (n/a - keep cell) -> empty newCell.
+# sentinels: (any cell) -> empty fltCell, (Regex) -> empty fltCell + the regex
+# text in fltCellRe, (n/a - keep cell) -> empty newCell.
 proc inst_update::set_scratch {} {
-    variable NONE; variable ANY; variable KEEP
-    variable nameRegex; variable fromLib; variable fromCell
+    variable NONE; variable ANY; variable KEEP; variable REGEX
+    variable nameRegex; variable fromLib; variable fromCell; variable cellRegex
     variable toLib; variable toCell
-    variable fltName; variable fltLib; variable fltCell
+    variable fltName; variable fltLib; variable fltCell; variable fltCellRe
     variable newLib; variable newCell
 
     set fltName [string trim $nameRegex]
     set fltLib  $fromLib
-    set fltCell [expr {($fromCell eq $ANY || $fromCell eq $NONE) ? "" : $fromCell}]
+    set fltCell [expr {($fromCell eq $ANY || $fromCell eq $NONE || $fromCell eq $REGEX) ? "" : $fromCell}]
+    set fltCellRe [expr {$fromCell eq $REGEX ? [string trim $cellRegex] : ""}]
     set newLib  $toLib
     set newCell [expr {$toCell eq $KEEP ? "" : $toCell}]
 }
@@ -365,7 +395,7 @@ proc inst_update::build_only {} {
     } elseif {[inst_update::runnable]} {
         inst_update::set_status "command built (not run)"
     } else {
-        inst_update::set_status "command built (not run); pick a From-cell to enable Run"
+        inst_update::set_status "command built (not run); pick a From-cell (or fill the regex) to enable Run"
     }
 }
 
@@ -378,7 +408,13 @@ proc inst_update::run {} {
         return
     }
     if {![inst_update::runnable]} {
-        inst_update::set_status "Run blocked: From-cell is (none)"
+        variable REGEX
+        variable fromCell
+        if {$fromCell eq $REGEX} {
+            inst_update::set_status "Run blocked: From-cell regex is empty"
+        } else {
+            inst_update::set_status "Run blocked: From-cell is (none)"
+        }
         return
     }
 
@@ -443,8 +479,10 @@ proc inst_update::report_results {} {
 
 # From-cell (none) is treated like (any cell) here: set_scratch maps both to an
 # empty fltCell, so List only needs the library (+ optional Name regex).
-# Output: always the containing cell + instance name; when the cell criterion
-# is empty (only the library specified) the master cell column is added.
+# (Regex) also lists with an empty regex text (= any cell of the library).
+# Output: always the containing cell + instance name; when the cell equality
+# criterion is empty ((none)/(any cell)/(Regex)) the master cell column is
+# added - in regex mode it shows which cells matched.
 proc inst_update::list_matches {} {
     variable listrows
     variable fltCell
@@ -627,6 +665,7 @@ proc inst_update::set_status {text} {
 proc inst_update::reset {} {
     variable NONE; variable KEEP
     variable nameRegex; set nameRegex ""
+    variable cellRegex; set cellRegex ""
     variable fscope;    set fscope view
     variable gotonone;  set gotonone 1
 
@@ -715,6 +754,16 @@ proc inst_update::show {} {
     grid columnconfigure $w.tgt 3 -weight 1
     bind $w.tgt.fle <<ComboboxSelected>> inst_update::on_from_lib_changed
     bind $w.tgt.fce <<ComboboxSelected>> inst_update::on_from_cell_changed
+
+    # From-cell regex row: enabled only while From-cell is (Regex); unanchored
+    # partial match like the Name regex. KeyRelease keeps the Run button state
+    # in step with the text (empty regex = Run disabled).
+    label $w.tgt.crl -text "From-cell regex:" -font IuLabel
+    entry $w.tgt.cre -textvariable ::inst_update::cellRegex -font IuEntry \
+        -width 26 -state disabled
+    grid $w.tgt.crl -row 2 -column 0 -sticky w  -padx 4 -pady 2
+    grid $w.tgt.cre -row 2 -column 1 -columnspan 3 -sticky ew -padx 4 -pady 2
+    bind $w.tgt.cre <KeyRelease> inst_update::refresh_run_state
 
     # --- -goto none ---
     checkbutton $w.goto -text "-goto none" -variable ::inst_update::gotonone -font IuLabel
