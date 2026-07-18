@@ -65,7 +65,7 @@ workspace menu -name {CUSTOM {Simulations} {Plot Voltages} }  -command {mode cro
 workspace bindkeys -command {Plot Voltages} -key "Alt+2"  ; # crossprobe voltages — click nets to plot V
 
 workspace menu -name {CUSTOM {Simulations} {Plot Currents} }  -command {mode crossprobei}
-workspace bindkeys -command {Plot Currents} -key "Ctrl+2"  ; # crossprobe currents — click terminals to plot I
+workspace bindkeys -command {Plot Currents} -key "Ctrl+4"  ; # crossprobe currents — click terminals to plot I
 
 workspace menu -name {CUSTOM {Useful Commands} {Open Scratch} }  -command {open_scratch}
 workspace bindkeys -command {Open Scratch} -key "Ctrl+Alt+Shift+S"  ; # open scratchpad cell (quick throwaway schematic)
@@ -327,3 +327,8 @@ workspace menu -name {CUSTOM Cell {Name Array Instances} }  -command {name_selec
 workspace menu -name {CUSTOM Cell {Re-instantiate selected} }  -command {re_place_selected_instances}
 workspace bindkeys -command {Re-instantiate selected} -key "Ctrl+Alt+Shift+R"  ; # re-place/refresh selected instances
 
+workspace menu -name {CUSTOM Cell {Make Editable} }  -command {cell reserve}
+workspace bindkeys -command {Make Edtiable} -key "Ctrl+2"  ; # same as what I had in Cadence
+
+workspace menu -name {CUSTOM Cell {Make Read-Only} }  -command {cell unreserve}
+workspace bindkeys -command {Make Read-Only} -key "Ctrl+Shift+2"  ; # same as what I had in Cadence
