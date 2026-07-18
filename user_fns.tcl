@@ -21,6 +21,7 @@ proc user1 {} {
 }
 
 proc user10 {} {
+    cell unreserve
 	window close
 }
 
