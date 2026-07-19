@@ -558,27 +558,51 @@ proc _xform_compass {orient angle mirror} {
 # fontsize is the symbol-view port's FontSize property (NOT the textlabel's),
 # read as-is from `property get -name FontSize -system`. Use `-units iu` on
 # `property set` when writing it back.
-# Decide which edge of the symbol a pin sits on purely from its LOCAL position
+# Decide which edge of the symbol a pin sits on from its LOCAL position
 # relative to the port bounding box, and return the outward compass direction
 # (east/west/north/south) in the symbol's own frame.
 #
-# This is deliberately independent of the port's TextJustification: some symbols
-# have degenerate pins (e.g. a pin on the top edge but justified horizontally),
+# Position, not TextJustification, is the primary signal: some symbols have
+# degenerate pins (e.g. a pin on the top edge but justified horizontally),
 # where the text orientation would imply a facing that juts back into the body.
-# Position is the reliable signal -- a top-edge pin faces north regardless of how
-# its name text is oriented. The dominant axis (larger offset from the bbox
-# center) wins; ties fall to horizontal. Local +y is up (north).
+# The pin's edge is the bbox edge it is CLOSEST to -- not the dominant axis of
+# its offset from the bbox center, which misclassifies pins near a corner of a
+# wide/tall symbol (a bottom-edge pin at the far left of a wide block is much
+# farther from the horizontal center than from the vertical one, but it still
+# faces south). An edge pin defines the bbox extent on its side, so its
+# distance to its own edge is exactly 0. Local +y is up (north).
+#
+# An axis with no extent (all ports at one x, or one y) carries no positional
+# signal, so its two edges are excluded. On an exact tie (a true corner pin,
+# closest to two edges at once), the optional justification hint -- the facing
+# implied by the pin's name text, from _pin_name_side -- breaks the tie if it
+# matches one of the tied edges; otherwise the tie falls to horizontal.
 # Returns "" only for a degenerate bbox (all ports coincident).
-proc _edge_compass_from_pos {lx ly xmin xmax ymin ymax} {
-    set cx [expr {($xmin + $xmax) / 2.0}]
-    set cy [expr {($ymin + $ymax) / 2.0}]
-    set dx [expr {$lx - $cx}]
-    set dy [expr {$ly - $cy}]
-    if {$dx == 0 && $dy == 0} { return "" }
-    if {abs($dx) >= abs($dy)} {
-        return [expr {$dx >= 0 ? "east" : "west"}]
+proc _edge_compass_from_pos {lx ly xmin xmax ymin ymax {hint ""}} {
+    set cands {}
+    if {$xmax > $xmin} {
+        lappend cands [list [expr {$lx - $xmin}] west]
+        lappend cands [list [expr {$xmax - $lx}] east]
     }
-    return [expr {$dy >= 0 ? "north" : "south"}]
+    if {$ymax > $ymin} {
+        lappend cands [list [expr {$ly - $ymin}] south]
+        lappend cands [list [expr {$ymax - $ly}] north]
+    }
+    if {![llength $cands]} { return "" }
+
+    set dmin ""
+    foreach c $cands {
+        set d [lindex $c 0]
+        if {$dmin eq "" || $d < $dmin} { set dmin $d }
+    }
+    set tied {}
+    foreach c $cands {
+        if {[lindex $c 0] == $dmin} { lappend tied [lindex $c 1] }
+    }
+    if {[llength $tied] > 1 && $hint ne "" && $hint in $tied} {
+        return $hint
+    }
+    return [lindex $tied 0]
 }
 
 proc pin_orientation_in_parent_frame {lib cell view pin_name pinX pinY instX instY angle mirror scaling} {
@@ -625,6 +649,7 @@ proc pin_orientation_in_parent_frame {lib cell view pin_name pinX pinY instX ins
     set best_ly ""
     set best_fs ""
     set best_d2 ""
+    set best_just {}
 
     foreach row $ports {
         lassign $row n lx ly ddir dhjust dvjust fs
@@ -661,6 +686,7 @@ proc pin_orientation_in_parent_frame {lib cell view pin_name pinX pinY instX ins
             set best_lx $lx
             set best_ly $ly
             set best_fs $fs
+            set best_just [list $ddir $dhjust $dvjust]
         }
     }
 
@@ -669,10 +695,12 @@ proc pin_orientation_in_parent_frame {lib cell view pin_name pinX pinY instX ins
         return ""
     }
 
-    # Facing is decided by the pin's position on the symbol, NOT its text
-    # justification -- robust to degenerate pins (e.g. a top-edge pin justified
-    # horizontally). _xform_compass then applies the instance angle/mirror.
-    set base [_edge_compass_from_pos $best_lx $best_ly $xmin $xmax $ymin $ymax]
+    # Facing is decided by the pin's position on the symbol (nearest bbox
+    # edge) -- robust to degenerate pins (e.g. a top-edge pin justified
+    # horizontally). Text justification is only a tie-break hint for true
+    # corner pins. _xform_compass then applies the instance angle/mirror.
+    set hint [_pin_name_side {*}$best_just]
+    set base [_edge_compass_from_pos $best_lx $best_ly $xmin $xmax $ymin $ymax $hint]
     if {$base eq ""} {
         puts "pin_orientation_in_parent_frame: cannot infer edge for '$pin_name' (degenerate port bbox in $lib/$cell/$view)"
         return ""
