@@ -75,7 +75,8 @@ workspace menu -name {CUSTOM {Useful Commands} {Choose Scratchpad Library} }  -c
 workspace menu -name {CUSTOM {Useful Commands} {Find Navigator} }  -command {find_helper::show}
 workspace bindkeys -command {Find Navigator} -key "Ctrl+Shift+G"  ; # Find Navigator — find/select/rename/list ports,instances,netlabels
 
-workspace menu -name {CUSTOM {Useful Commands} {Instance Update} }  -command {inst_update::show}
+workspace menu -name {ADDON {Useful Commands} {Instance Update} }  -command {inst_update::show}
+workspace bindkeys -command {Instance Update} -key "Ctrl+I"  ; # form to find/replace instance master
 
 workspace menu -name {CUSTOM {Useful Commands} {Reset Grid} }  -command {res_grid}
 workspace bindkeys -command {Reset Grid} -key "Alt+R"  ; # reset snap grid to default (50)
@@ -313,6 +314,9 @@ workspace bindkeys -command {Complete Snapped Wire} -key "Alt+W"  ; # finish wir
 
 workspace menu -name {CUSTOM Wires {Stub to Nearest Pin} }  -command {snap_stub_at_nearest_pin}
 workspace bindkeys -command {Stub to Nearest Pin} -key "Alt+Space"  ; # draw stub+netlabel at nearest pin
+
+workspace menu -name {CUSTOM Wires {Edit Netlabel} }  -command {edit_netlabel_dialog}
+workspace bindkeys -command {Edit Netlabel} -key "Ctrl+Alt+q"  ; # custom form
 
 workspace menu -name {CUSTOM Cell {Rename to symbol} }  -command {rename_current_view_to_symbol_review}
 
