@@ -173,7 +173,7 @@ workspace bindkeys -command {Fracture Bus or Box <-> Paths} -key "Ctrl+Alt+B"  ;
 # selection-aware: a box or path goes to convert_box_paths, anything else to _fracture.
 
 workspace menu -name {CUSTOM {Useful Commands} {Box -> Paths (whole view)} }  -command {box_to_paths_all}
-workspace bindkeys -command {Box -> Paths (whole view)} } -key "Ctrl+Alt+Shift+B"  ; # box/path selected -> swap form; otherwise fracture comma-separated bus
+workspace bindkeys -command {Box -> Paths (whole view)} -key "Ctrl+Alt+Shift+B"  ; # box/path selected -> swap form; otherwise fracture comma-separated bus
 # every box in the open view, nothing selected first -- box_to_paths_all -dryrun 1 lists them
 
 # simulation aids..
