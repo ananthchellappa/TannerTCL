@@ -167,6 +167,15 @@ workspace bindkeys -command {Increase snap grid} -key "Alt+Up Arrow"  ; # increa
 workspace menu -name {CUSTOM {Useful Commands} {Toggle Case} }  -command {toggle_case}
 workspace bindkeys -command {Toggle Case} -key "Ctrl+Alt+5"  ; # toggle case of selected text (upper/lower)
 
+workspace menu -name {CUSTOM {Useful Commands} {Fracture Bus or Box <-> Paths} }  -command {fracture_or_convert}
+workspace bindkeys -command {Fracture Bus or Box <-> Paths} -key "Ctrl+Alt+B"  ; # box/path selected -> swap form; otherwise fracture comma-separated bus
+# Was {CUSTOM Wires {Fracture Comma Sep. Bus}} -> _fracture on the same key. Now
+# selection-aware: a box or path goes to convert_box_paths, anything else to _fracture.
+
+workspace menu -name {CUSTOM {Useful Commands} {Box -> Paths (whole view)} }  -command {box_to_paths_all}
+workspace bindkeys -command {Box -> Paths (whole view)} } -key "Ctrl+Alt+Shift+B"  ; # box/path selected -> swap form; otherwise fracture comma-separated bus
+# every box in the open view, nothing selected first -- box_to_paths_all -dryrun 1 lists them
+
 # simulation aids..
 
 workspace menu -name {CUSTOM {Simulations} {Display Node V} }  -command {mode -propevalstyle voltage}
@@ -293,9 +302,6 @@ workspace bindkeys -command {Stubs Hor-Only Labels} -key "Shift+Space"  ; # add 
 
 workspace menu -name {CUSTOM Wires {Make stubs} }  -command {draw addwirestubs -wirelength 3 -fontsize 7pt }
 workspace bindkeys -command {Make stubs} -key "Space"  ; # native addwirestubs (len 3, 7pt)
-
-workspace menu -name {CUSTOM Wires {Fracture Comma Sep. Bus} }  -command {_fracture}
-workspace bindkeys -command {Fracture Comma Sep. Bus} -key "Ctrl+Alt+B"  ; # fracture comma-separated bus into signals
 
 workspace menu -name {CUSTOM Wires {Install noConn} }  -command {no_conn}
 workspace bindkeys -command {Install noConn} -key "Ctrl+Alt+N"  ; # place no-connect (noConn) marker on pin
