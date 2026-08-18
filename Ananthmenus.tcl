@@ -185,7 +185,7 @@ workspace menu -name {CUSTOM {Simulations} {Display Terminal I} }  -command {mod
 workspace bindkeys -command {Display Terminal I} -key "Ctrl+I"  ; # display terminal currents (propevalstyle current)
 
 workspace menu -name {CUSTOM {Simulations} {Display Terminal I} }  -command {mode -propevalstyle current}
-workspace bindkeys -command {Display Terminal I} -key "Ctrl+I"  ; # display terminal currents (propevalstyle current)
+workspace bindkeys -command {Display Terminal I} -key "6"  ; # display terminal currents (propevalstyle current)
 
 workspace menu -name {CUSTOM {Simulations} {Send to Calculator} }  -command {mode crossprobev; mode -probeto calculator}
 workspace bindkeys -command {Send to Calculator} -key "Alt+3"  ; # crossprobe node voltage to calculator
