@@ -20,6 +20,17 @@
 #   apply to (Regex): keep-cell = library-only migration of the matched cells,
 #   concrete To-cell = many-to-one replacement.
 #
+# Missing-cell guard: before the traversal, Run snapshots the cells of the
+#   To-library. Any instance whose target cell name is absent from that list is
+#   left UNTOUCHED and reported under SKIPPED. This matters most in keep-cell
+#   mode, where the cell name is per-instance and so cannot be validated by
+#   picking it from a dropdown. Without the guard, setting MasterLibrary alone
+#   leaves the instance on a library/cell pair that does not exist and S-Edit
+#   silently re-binds it to some other master instead of raising.
+#   Run also refuses to start if the To-library's cell list comes back empty
+#   (empty library, or a failed query) - validating against an empty list would
+#   skip everything and look like a broken tool.
+#
 # Get button:  seed From-library / From-cell from the selected instance(s).
 # List button: read-only report of matching instances (From-cell (none) counts
 #   as (any cell)): containing cell + instance name, plus the master cell when
@@ -35,6 +46,14 @@
 #    vars, so a Name regex containing { } [ ] is never string-interpolated.
 #  - Matching happens in -filter (Name regex only if given, plus
 #    MasterLibrary / MasterCell equality); the update happens in -modify.
+#  - The missing-cell guard also lives in -modify, not -filter: skipped
+#    instances stay matched, so List and the Target section keep their meaning
+#    and each skip earns a report row instead of silently disappearing.
+#  - The report prints the master READ BACK from each instance after the sets,
+#    not the master that was requested, so a silent re-bind shows up as
+#    ** WARNING instead of being reported as a clean success.
+#  - Scope 'selection' adds -add: find -scope selection otherwise REPLACES the
+#    selection with whatever it traversed.
 #  - Every dropdown re-reads the design database in its -postcommand, so lists
 #    stay fresh as libraries/cells are opened or created.
 #
@@ -64,11 +83,18 @@ namespace eval inst_update {
     variable fltCellRe ""   ;# cell-name regex; empty = no regex criterion
     variable newLib    ""
     variable newCell   ""   ;# empty = keep each instance's cell
+    # Cells that exist in the To-library, snapshotted ONCE per Run (never per
+    # instance). The -modify body consults this to skip any instance whose
+    # kept cell name is absent from the target library. Empty = the library is
+    # empty OR could not be enumerated - Run refuses to validate against that.
+    variable toCells   {}
+    variable toCellsOk 0    ;# 0 = toCells could NOT be enumerated (fail closed)
 
     variable gotonone  1
 
-    variable hits  {}
-    variable fails {}
+    variable hits  {}   ;# {name oldLib oldCell wantCell gotLib gotCell}
+    variable skips {}   ;# {name oldLib oldCell wantCell caseHint} - untouched
+    variable fails {}   ;# {name oldLib oldCell errorText}
 
     # {MasterLibrary MasterCell} pairs collected from the selection by Get
     variable getpairs {}
@@ -108,6 +134,24 @@ proc inst_update::get_cells {lib} {
     }
     puts "inst_update: cannot list cells of '$lib': -design -> $err1 ; -libraries -> $err2"
     return {}
+}
+
+# Strict variant for the WRITE path: returns {ok cellList}. ok=0 means the
+# cells could not be enumerated, which is a different thing from a library that
+# is genuinely empty - the missing-cell guard must fail CLOSED on the first and
+# only skip on the second.
+# The `-libraries` fallback is deliberately NOT used here: it was observed to
+# answer for the ACTIVE design regardless of its argument, so the guard would
+# validate every instance against the wrong library's cell names and wave
+# through exactly the retargets it exists to stop. Dropdown population can keep
+# using the lenient get_cells - a wrong list there is cosmetic.
+proc inst_update::get_cells_strict {lib} {
+    if {$lib eq ""} { return [list 0 {}] }
+    if {[catch {set cells [database cells -design $lib]} err]} {
+        puts "inst_update: cannot list cells of '$lib' (-design): $err"
+        return [list 0 {}]
+    }
+    return [list 1 [lsort -dictionary $cells]]
 }
 
 #-----------------------------------------------------------------------------
@@ -311,23 +355,49 @@ proc inst_update::build_list_script {} {
     return $s
 }
 
-# The update lives in -modify. Library is set before cell so that a keep-cell
-# migration validates against the NEW library. Both sets share one catch: if
-# the second fails the instance may be half-updated, so it is reported under
-# FAILED with the error text.
+# The update lives in -modify. Three outcomes per instance:
+#
+#  SKIPPED - the cell name this instance would keep (or the chosen To-cell)
+#    does not exist in the To-library, per the toCells snapshot. NOTHING is
+#    written. This is the guard the form used to lack: setting MasterLibrary
+#    alone leaves the instance on a (newLib, oldCell) pair that does not
+#    exist, and S-Edit was observed to silently re-bind it to some other cell
+#    rather than raise - so the old "just set it and catch the error" contract
+#    reported a clean success for an instance that had been retargeted to the
+#    wrong master. Ordering cannot fix this (library-first passes through
+#    (newLib, oldCell), cell-first through (oldLib, newCell); both are
+#    unresolvable), so the check has to be pre-flight.
+#    The guard lives here and not in -filter on purpose: the instance stays
+#    matched, so the Target section and List keep their meaning and every
+#    skipped instance earns a report row instead of vanishing silently.
+#  FAILED  - a property set raised. Library is set before cell, so the
+#    instance may be half-updated; reported with the error text.
+#  updated - both sets returned. The new master is then READ BACK and the
+#    readback (not the request) is what the report prints, so the Results pane
+#    can never again assert a retarget that did not happen. Readback inside a
+#    -modify body is not yet in specs/sedit_tcl_api_findings.md, so it is
+#    caught: on failure the row carries "?" and says so.
 proc inst_update::build_mod_script {} {
     return {set _n    [lindex [property get -name Name -system] 0]
 set _oldl [lindex [property get -name MasterLibrary -system] 0]
 set _oldc [lindex [property get -name MasterCell    -system] 0]
 set _newc $::inst_update::newCell
 if {$_newc eq ""} { set _newc $_oldc }
-if {[catch {
+if {[lsearch -exact $::inst_update::toCells $_newc] < 0} {
+    if {[catch {lsearch -exact -nocase $::inst_update::toCells $_newc} _i]} { set _i -1 }
+    if {$_i >= 0} { set _hint [lindex $::inst_update::toCells $_i] } else { set _hint "" }
+    lappend ::inst_update::skips [list $_n $_oldl $_oldc $_newc $_hint]
+} elseif {[catch {
     property set -name MasterLibrary -system -value $::inst_update::newLib
     property set -name MasterCell    -system -value $_newc
 } _err]} {
     lappend ::inst_update::fails [list $_n $_oldl $_oldc $_err]
 } else {
-    lappend ::inst_update::hits  [list $_n $_oldl $_oldc $_newc]
+    if {[catch {
+        set _gotl [lindex [property get -name MasterLibrary -system] 0]
+        set _gotc [lindex [property get -name MasterCell    -system] 0]
+    }]} { set _gotl "?" ; set _gotc "?" }
+    lappend ::inst_update::hits [list $_n $_oldl $_oldc $_newc $_gotl $_gotc]
 }}
 }
 
@@ -336,6 +406,12 @@ proc inst_update::build_args {} {
     variable gotonone
     set a [list instance]
     lappend a -scope $fscope
+    # -add on selection scope: `find -scope selection` REPLACES the selection
+    # with what it traverses unless -add is given (the reason
+    # get_from_selection uses it too). Without this a run silently shrinks the
+    # user's selection to the matched subset, so a second run with broader
+    # criteria under-applies.
+    if {$fscope eq "selection"} { lappend a -add }
     if {$gotonone} { lappend a -goto none }
     lappend a -filter [inst_update::build_filter_script]
     lappend a -modify [inst_update::build_mod_script]
@@ -347,6 +423,7 @@ proc inst_update::build_list_args {} {
     variable fscope
     set a [list instance]
     lappend a -scope $fscope
+    if {$fscope eq "selection"} { lappend a -add }   ;# see build_args
     lappend a -goto none
     lappend a -filter [inst_update::build_list_script]
     return $a
@@ -360,14 +437,33 @@ proc inst_update::set_scratch {} {
     variable nameRegex; variable fromLib; variable fromCell; variable cellRegex
     variable toLib; variable toCell
     variable fltName; variable fltLib; variable fltCell; variable fltCellRe
-    variable newLib; variable newCell
+    variable newLib; variable newCell; variable toCells; variable toCellsOk
 
     set fltName [string trim $nameRegex]
     set fltLib  $fromLib
-    set fltCell [expr {($fromCell eq $ANY || $fromCell eq $NONE || $fromCell eq $REGEX) ? "" : $fromCell}]
-    set fltCellRe [expr {$fromCell eq $REGEX ? [string trim $cellRegex] : ""}]
-    set newLib  $toLib
-    set newCell [expr {$toCell eq $KEEP ? "" : $toCell}]
+    # if/else, NOT expr ternaries: expr numerically normalizes any operand
+    # that parses as a number, so a cell literally named 007 / 1e5 / 1.10
+    # would be silently renumbered on its way into the scratch vars.
+    if {$fromCell eq $ANY || $fromCell eq $NONE || $fromCell eq $REGEX} {
+        set fltCell ""
+    } else {
+        set fltCell $fromCell
+    }
+    if {$fromCell eq $REGEX} {
+        set fltCellRe [string trim $cellRegex]
+    } else {
+        set fltCellRe ""
+    }
+    set newLib $toLib
+    if {$toCell eq $KEEP} { set newCell "" } else { set newCell $toCell }
+
+    # One database read per Run/List, never per instance: what the To-library
+    # actually contains. build_mod_script skips any instance whose kept cell
+    # name is missing from this list. toCellsOk=0 means the list is not
+    # trustworthy at all - Run refuses to start rather than validate against it.
+    set _tc     [inst_update::get_cells_strict $toLib]
+    set toCellsOk [lindex $_tc 0]
+    set toCells   [lindex $_tc 1]
 }
 
 #-----------------------------------------------------------------------------
@@ -386,10 +482,41 @@ proc inst_update::hier_guard {} {
     return 1
 }
 
+# Build must warn about exactly what Run would REFUSE to start on. The built
+# command carries the missing-cell guard, so a state Run rejects does not
+# corrupt anything if pasted - it silently skips every instance instead, and
+# the copy-to-console route is the documented way to update hierarchy-wide.
+# Reporting "command built" for that state would read as success.
 proc inst_update::build_only {} {
+    variable toCells
+    variable toCellsOk
+    variable toLib
+    variable newCell
     set was_hier [inst_update::hier_guard]
     inst_update::set_scratch
-    inst_update::show_cmd [inst_update::build_args]
+    inst_update::show_cmd [inst_update::build_args] 1
+
+    set warn ""
+    if {!$toCellsOk} {
+        set warn "WARNING: the cell list of To library '$toLib' could not be read (see console)."
+    } elseif {![llength $toCells]} {
+        set warn "WARNING: To library '$toLib' contains no cells."
+    } elseif {$newCell ne "" && [lsearch -exact $toCells $newCell] < 0} {
+        set warn "WARNING: To library '$toLib' has no cell '$newCell'."
+    }
+    if {$warn ne ""} {
+        set short $warn
+        append warn "\nRun would refuse to start in this state, and the command above would\nSKIP every instance rather than update it. Fix the Replacement section first."
+        set prev ""
+        catch {set prev [.instUpdate.res.t get 1.0 end-1c]}
+        if {$was_hier && $prev ne ""} {
+            inst_update::set_results "$prev\n\n$warn"
+        } else {
+            inst_update::set_results $warn
+        }
+        inst_update::set_status "built, but NOT runnable: $short"
+        return
+    }
     if {$was_hier} {
         inst_update::set_status "scope hierarchy -> view; command built (not run)"
     } elseif {[inst_update::runnable]} {
@@ -401,7 +528,13 @@ proc inst_update::build_only {} {
 
 proc inst_update::run {} {
     variable hits
+    variable skips
     variable fails
+    variable toCells
+    variable toCellsOk
+    variable toLib
+    variable newCell
+    variable KEEP
 
     if {[inst_update::hier_guard]} {
         inst_update::set_status "Run blocked: scope hierarchy -> view (see Results)"
@@ -418,20 +551,49 @@ proc inst_update::run {} {
         return
     }
 
-    set hits {}
+    set hits  {}
+    set skips {}
     set fails {}
     inst_update::set_scratch
+
+    # Guard the guard, failing CLOSED in both directions: an unreadable cell
+    # list must never be treated as "no such cell" (that would skip everything
+    # and look like a broken tool), and an empty one must never be treated as
+    # readable (that would validate every instance against nothing).
+    if {!$toCellsOk} {
+        inst_update::set_results "Run aborted: the cell list of To library '$toLib' could not be read\n(see the console for the database error).\nWithout it the missing-cell guard cannot tell a real cell from a missing one.\nNothing was changed."
+        inst_update::set_status "Run aborted: cannot read cells of '$toLib'"
+        return
+    }
+    if {![llength $toCells]} {
+        inst_update::set_results "Run aborted: To library '$toLib' contains no cells.\nThere is nothing any instance could be retargeted to.\nNothing was changed."
+        inst_update::set_status "Run aborted: '$toLib' is empty"
+        return
+    }
+    # The To-cell combobox is readonly, so a freshly picked To-cell is real by
+    # construction - but apply_state restores a To-cell from History without
+    # re-running the on_to_lib_changed validation, and the library can change
+    # under an open form. Re-check it here, where it matters.
+    if {$newCell ne "" && [lsearch -exact $toCells $newCell] < 0} {
+        inst_update::set_results "Run aborted: To library '$toLib' has no cell '$newCell'.\n(Recalled from History, or the library changed while the form was open.)\nPick the To-cell again, or use $KEEP.\nNothing was changed."
+        inst_update::set_status "Run aborted: '$toLib' has no cell '$newCell'"
+        return
+    }
+
     inst_update::history_save
 
     set args [inst_update::build_args]
-    inst_update::show_cmd $args
+    inst_update::show_cmd $args 1
 
     catch {mode renderoff}
     set rc [catch {find {*}$args} result]
     catch {mode renderon}
 
     if {$rc} {
-        inst_update::set_results "find failed:\n$result"
+        # Do NOT return without reporting: the traversal may have already
+        # updated/skipped/failed instances before the error, and those rows
+        # are the only record of what the design now looks like.
+        inst_update::report_results "find failed part-way through:\n$result\n"
         inst_update::set_status "ERROR: $result"
         puts "inst_update ERROR: $result"
         return
@@ -439,22 +601,89 @@ proc inst_update::run {} {
     inst_update::report_results
 }
 
-proc inst_update::report_results {} {
+# The "->" side of an updated row is the master READ BACK from the instance,
+# not the master that was requested - a row can therefore contradict the
+# request, and when it does it is marked ** WARNING rather than FAILED (the
+# sets returned cleanly; it is S-Edit's resolution that differed). `prefix` is
+# used by run to report a part-way find failure above the rows it did produce.
+proc inst_update::report_results {{prefix ""}} {
     variable hits
+    variable skips
     variable fails
     variable newLib
 
     set nhit  [llength $hits]
+    set nskip [llength $skips]
     set nfail [llength $fails]
+    set nwarn 0
+    set nunk  0
+
+    # Did EVERY row read back as its own PRE-write master, while at least one
+    # row actually asked for a change? Then the readback is not observing the
+    # write (a commit-at-body-exit model looks exactly like this) - it is not
+    # evidence that S-Edit re-bound every instance. Say that once, rather than
+    # stamping ** WARNING on N rows that are probably all correct: a marker
+    # that fires on healthy runs is a marker nobody reads.
+    set stale 0
+    if {$nhit > 0} {
+        set allsame 1
+        set anyreq  0
+        foreach h $hits {
+            foreach {n oldl oldc wantc gotl gotc} $h break
+            if {$gotl ne $oldl || $gotc ne $oldc} { set allsame 0 }
+            if {$newLib ne $oldl || $wantc ne $oldc} { set anyreq 1 }
+        }
+        set stale [expr {$allsame && $anyreq}]
+    }
 
     set lines {}
+    if {$prefix ne ""} { lappend lines $prefix }
     if {$nhit == 0} {
         lappend lines "(no instances updated)"
     } else {
-        lappend lines "$nhit instance(s) updated:"
+        if {$stale} {
+            lappend lines "$nhit instance(s) updated (\"->\" = requested; see the note below):"
+        } else {
+            lappend lines "$nhit instance(s) updated (\"->\" = master read back afterwards):"
+        }
         foreach h $hits {
-            foreach {n oldl oldc newc} $h break
-            lappend lines [format "  %-24s %s/%s  ->  %s/%s" $n $oldl $oldc $newLib $newc]
+            foreach {n oldl oldc wantc gotl gotc} $h break
+            set flag ""
+            if {$stale} {
+                set shown "$newLib/$wantc"
+            } elseif {$gotl eq "?" || $gotl eq "" || $gotc eq ""} {
+                # readback threw, or answered with nothing - either way it says
+                # nothing about the write, so do not call it a mismatch
+                set shown "$newLib/$wantc"
+                set flag "   ?? requested; could not read the master back to verify"
+                incr nunk
+            } else {
+                set shown "$gotl/$gotc"
+                if {$gotl ne $newLib || $gotc ne $wantc} {
+                    set flag "   ** WARNING: $newLib/$wantc was requested"
+                    incr nwarn
+                }
+            }
+            lappend lines [format "  %-24s %s/%s  ->  %s%s" $n $oldl $oldc $shown $flag]
+        }
+        if {$stale} {
+            incr nunk $nhit
+            lappend lines ""
+            lappend lines "NOTE: every instance read back as the master it had BEFORE the write, so"
+            lappend lines "this S-Edit build does not expose the new master inside the traversal. The"
+            lappend lines "\"->\" column is therefore what was REQUESTED, not what was verified. The"
+            lappend lines "updates themselves were accepted without error - check a few by eye."
+        }
+    }
+    if {$nskip > 0} {
+        lappend lines ""
+        lappend lines "SKIPPED - no such cell in '$newLib', left untouched:"
+        foreach sk $skips {
+            foreach {n oldl oldc wantc hint} $sk break
+            set note ""
+            if {$hint ne ""} { set note "   (case differs - did you mean '$hint'?)" }
+            lappend lines [format "  %-24s %s/%s : '%s' is not a cell of %s%s" \
+                               $n $oldl $oldc $wantc $newLib $note]
         }
     }
     if {$nfail > 0} {
@@ -468,6 +697,9 @@ proc inst_update::report_results {} {
     inst_update::set_results [join $lines "\n"]
 
     set msg "$nhit updated"
+    if {$nskip > 0} { append msg ", $nskip skipped" }
+    if {$nwarn > 0} { append msg ", $nwarn WARNING" }
+    if {$nunk  > 0} { append msg ", $nunk unverified" }
     if {$nfail > 0} { append msg ", $nfail failed" }
     inst_update::set_status $msg
     puts "inst_update: $msg"
@@ -555,7 +787,11 @@ proc inst_update::history_save {} {
     inst_update::hist_update_label
 }
 
+# Returns a note to append to the caller's status line ("" when clean).
 proc inst_update::apply_state {s} {
+    variable KEEP
+    variable toLib
+    variable toCell
     foreach {v val} $s {
         variable $v
         set $v $val
@@ -564,7 +800,17 @@ proc inst_update::apply_state {s} {
     # only sets -values, so the recalled cell selections survive)
     inst_update::populate_from_cells
     inst_update::populate_to_cells
+
+    # A recalled To-cell can be stale: <<ComboboxSelected>> never fires on a
+    # history recall, so on_to_lib_changed's existence check is skipped. Fall
+    # back to keep-cell rather than let Run act on a name that has since gone.
+    set note ""
+    if {$toCell ne $KEEP && [lsearch -exact [inst_update::get_cells $toLib] $toCell] < 0} {
+        set note " - recalled To-cell '$toCell' is not in '$toLib'; reset to $KEEP"
+        set toCell $KEEP
+    }
     inst_update::refresh_run_state
+    return $note
 }
 
 proc inst_update::hist_update_label {} {
@@ -587,9 +833,9 @@ proc inst_update::history_up {} {
     set n [llength $history]
     if {$n == 0} { inst_update::set_status "history empty"; return }
     if {$histidx > 0} { incr histidx -1 }
-    inst_update::apply_state [lindex $history $histidx]
+    set note [inst_update::apply_state [lindex $history $histidx]]
     inst_update::hist_update_label
-    inst_update::set_status "recalled history [expr {$histidx + 1}]/$n"
+    inst_update::set_status "recalled history [expr {$histidx + 1}]/$n$note"
 }
 
 proc inst_update::history_down {} {
@@ -598,9 +844,9 @@ proc inst_update::history_down {} {
     set n [llength $history]
     if {$n == 0} { inst_update::set_status "history empty"; return }
     if {$histidx < $n - 1} { incr histidx }
-    inst_update::apply_state [lindex $history $histidx]
+    set note [inst_update::apply_state [lindex $history $histidx]]
     inst_update::hist_update_label
-    inst_update::set_status "recalled history [expr {$histidx + 1}]/$n"
+    inst_update::set_status "recalled history [expr {$histidx + 1}]/$n$note"
 }
 
 #-----------------------------------------------------------------------------
@@ -645,8 +891,30 @@ proc inst_update::set_txt {path text} {
     $path configure -state disabled
 }
 
-proc inst_update::show_cmd {arglist} {
-    inst_update::set_txt .instUpdate.cmdf.t "find $arglist"
+# The -filter and -modify bodies read namespace scratch variables, which the
+# command pane's text cannot see once it is copied to the console. `full`
+# emits them as literal `set` lines plus the trailing report call, so the
+# copied command is self-contained: paste it, change -scope view to
+# -scope hierarchy, run it, and you get the same Results as Run would print.
+# Every value goes through [list], so cell/library names containing spaces,
+# braces or $ survive intact.
+proc inst_update::cmd_preamble {} {
+    set p {}
+    foreach v {fltName fltLib fltCell fltCellRe newLib newCell toCells} {
+        variable $v
+        lappend p "set ::inst_update::$v [list [set $v]]"
+    }
+    lappend p "set ::inst_update::hits {} ; set ::inst_update::skips {} ; set ::inst_update::fails {}"
+    return [join $p "\n"]
+}
+
+proc inst_update::show_cmd {arglist {full 0}} {
+    if {$full} {
+        set txt "[inst_update::cmd_preamble]\nfind $arglist\ninst_update::report_results"
+    } else {
+        set txt "find $arglist"
+    }
+    inst_update::set_txt .instUpdate.cmdf.t $txt
 }
 
 proc inst_update::set_results {text} {
