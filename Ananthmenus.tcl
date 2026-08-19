@@ -182,9 +182,6 @@ workspace menu -name {CUSTOM {Simulations} {Display Node V} }  -command {mode -p
 workspace bindkeys -command {Display Node V} -key "Ctrl+Alt+V"  ; # display node voltages (propevalstyle voltage)
 
 workspace menu -name {CUSTOM {Simulations} {Display Terminal I} }  -command {mode -propevalstyle current}
-workspace bindkeys -command {Display Terminal I} -key "Ctrl+I"  ; # display terminal currents (propevalstyle current)
-
-workspace menu -name {CUSTOM {Simulations} {Display Terminal I} }  -command {mode -propevalstyle current}
 workspace bindkeys -command {Display Terminal I} -key "6"  ; # display terminal currents (propevalstyle current)
 
 workspace menu -name {CUSTOM {Simulations} {Send to Calculator} }  -command {mode crossprobev; mode -probeto calculator}
